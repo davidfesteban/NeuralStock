@@ -12,8 +12,5 @@ public class Algorithm {
         return x * (1 - x);
     }
 
-
-    public static Random random() {
-        return new Random();
-    }
+    public static final Random random = new Random();
 }

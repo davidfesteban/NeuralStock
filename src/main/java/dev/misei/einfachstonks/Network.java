@@ -12,6 +12,8 @@ import java.util.function.Consumer;
 public class Network {
     private final List<Layer> layers = new ArrayList<>();
     private final DataSetList dataSetList;
+    private final Double learningRate = 0.01;
+    private final Double momentum = 0.9;
 
     public Network(DataSetList dataSetList, int nodesPerHiddenLayer, int hiddenLayerSize) {
         this.dataSetList = dataSetList;
@@ -28,7 +30,8 @@ public class Network {
 
             dataSetList.getDataSets().forEach(dataSet -> {
                 injectComputeForward(dataSet);
-                injectComputeBackward(dataSet);
+                injectComputeBackward(dataSet, learningRate, momentum);
+                ContextCache.weightedGradient.clear();
             });
 
             --epochs;
@@ -56,15 +59,25 @@ public class Network {
         //layers.forEach(layer -> log.info(layer.toString()));
     }
 
-    private void injectComputeBackward(DataSet dataSet) {
+    private void injectComputeBackward(DataSet dataSet, Double learningRate, Double momentum) {
         var outputLayer = layers.get(layers.size() - 1);
-        ContextCache.backwardTarget.clear();
 
-        for (int y = 0; y < dataSet.outputs().size(); y++) {
-            ContextCache.backwardTarget.put(outputLayer.getNeurons().get(y).getId(), dataSet.outputs().get(0));
+        for (int i = 0; i < dataSet.outputs().size(); i++) {
+            outputLayer.getNeurons().get(i).computeBackward(dataSet.outputs().get(i));
         }
 
-        layers.reversed().forEach(Layer::computeBackward);
+        for (int i = layers.size() - 2; i >= 0 ; i--) {
+            layers.get(i).computeBackward();
+        }
+
+        for (int i = layers.size() - 1; i >= 0 ; i--) {
+            layers.get(i).getNeurons().forEach(new Consumer<Neuron>() {
+                @Override
+                public void accept(Neuron neuron) {
+                    neuron.updateWeight(learningRate, momentum);
+                }
+            });
+        }
     }
 
 

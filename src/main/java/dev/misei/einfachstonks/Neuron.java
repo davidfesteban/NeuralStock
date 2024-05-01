@@ -3,35 +3,32 @@ package dev.misei.einfachstonks;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.*;
-import java.util.function.BinaryOperator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static dev.misei.einfachstonks.Algorithm.sigmoidDerivative;
 
 @Getter
 @Setter
 public class Neuron {
 
-    private final Random random;
     private final UUID id;
 
     // Neuron, Weight
     private List<RefNeuron> prevLayerNeuron = new ArrayList<>();
 
     private Double bias;
+    private double gradient;
     private Double predicted;
-    private Double learningRate;
 
 
     public Neuron(UUID uuid) {
-        this.random = new Random();
         this.predicted = 0d;
-        this.bias = random.nextDouble(-1, 1);
+        this.bias = 1d;
         this.id = uuid;
-        this.learningRate = 0.05;
     }
 
 
@@ -47,44 +44,50 @@ public class Neuron {
                 var predicted = ContextCache.predictedValues.get(refNeuron.getRef());
                 preActivation.increment(predicted * refNeuron.weight);
             });
+            predicted = Algorithm.sigmoid(preActivation.get() + bias);
         } else {
-            preActivation.set(predicted);
+            //Input layer
         }
 
-        predicted = Algorithm.sigmoid(preActivation.get() + bias);
+
         ContextCache.predictedValues.put(this.id, predicted);
     }
 
-    public void computeBackward() {
-        // Step 1: Calculate error between expected output and predicted value
-        double expectedOutput = ContextCache.backwardTarget.get(this.id);
-        double outputError = expectedOutput - predicted;
+    public double error(double target) {
+        return target - predicted;
+    }
 
-        // Step 2: Calculate gradient using the derivative of the sigmoid function
-        double outputGradient = outputError * Algorithm.sigmoidDerivative(predicted);
-
-        // Step 3: Update the weights for connections from previous layer neurons
-        prevLayerNeuron = prevLayerNeuron.stream()
-                .map(refNeuron -> {
-                    // Get current weight
-                    double currentWeight = refNeuron.getWeight();
-                    // Calculate the new weight
-                    double newWeight = currentWeight + (learningRate * outputGradient * ContextCache.predictedValues.get(refNeuron.ref));
-                    // Return a new RefNeuron with the updated weight
-                    return refNeuron.withWeight(newWeight);
-                })
-                .toList();
-
-        // Step 4: Update the bias for this neuron
-        bias += learningRate * outputGradient;
-
-        // Step 5: Check if this neuron impacts other neurons and propagate error
+    public void computeBackward(double target) {
+        this.gradient = error(target) * Algorithm.sigmoidDerivative(predicted);
         prevLayerNeuron.forEach(new Consumer<RefNeuron>() {
             @Override
             public void accept(RefNeuron refNeuron) {
-                ContextCache.backwardTarget.put(refNeuron.getRef(), outputGradient * refNeuron.getWeight());
+                ContextCache.weightedGradient.add(refNeuron.getRef(), gradient * refNeuron.getWeight());
             }
         });
+    }
+
+    public void computeBackward() {
+        this.gradient = ContextCache.weightedGradient.get(this.id).stream().reduce(Double::sum).orElse(0d)
+                * Algorithm.sigmoidDerivative(predicted);
+
+        prevLayerNeuron.forEach(new Consumer<RefNeuron>() {
+            @Override
+            public void accept(RefNeuron refNeuron) {
+                ContextCache.weightedGradient.add(refNeuron.getRef(), gradient * refNeuron.getWeight());
+            }
+        });
+    }
+
+    public void updateWeight(double lr, double mu) {
+        prevLayerNeuron = prevLayerNeuron.stream().map(new Function<RefNeuron, RefNeuron>() {
+            @Override
+            public RefNeuron apply(RefNeuron refNeuron) {
+                double prevDelta = refNeuron.getWeightDelta();
+                var weightDelta = lr * gradient * ContextCache.predictedValues.get(refNeuron.ref);
+                return refNeuron.withWeightDelta(weightDelta).withWeight(refNeuron.getWeight() + weightDelta + mu * prevDelta);
+            }
+        }).toList();
     }
 
 

@@ -12,6 +12,7 @@ import java.util.UUID;
 public class RefNeuron {
     UUID ref;
     Double weight;
+    Double weightDelta;
 
     @Override
     public String toString() {

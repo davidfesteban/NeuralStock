@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 @Data
 public class Layer {
     private final List<Neuron> neurons = new ArrayList<>();
-    private final Random random = new Random();
     private final UUID id = UUID.randomUUID();
 
     public void add(Neuron neuron) {
@@ -21,7 +20,7 @@ public class Layer {
     public void addAllReferences(Layer prevLayer) {
         neurons.forEach(neuron -> {
             var prevLayerRef = prevLayer.getNeurons().stream().map(
-                            prevNeuron -> new RefNeuron(prevNeuron.getId(), random.nextDouble(-1, 1)))
+                            prevNeuron -> new RefNeuron(prevNeuron.getId(), Math.floor(Algorithm.random.nextDouble(-2, 2)*100)/100, 0d))
                     .toList();
             neuron.addAllPrev(prevLayerRef);
         });
