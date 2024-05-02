@@ -49,15 +49,16 @@ public class Network extends NetworkLifecycle {
     }
 
     public List<Double> predict(DataSet dataSet) {
+        List<Double> results = new ArrayList<>();
         layers.getFirst().inject(dataSet.inputs());
         computeForward(context);
         layers.getLast().getAxons().forEach(new Consumer<Axon>() {
             @Override
             public void accept(Axon axon) {
-                System.out.println(context.neuronOutput.get(axon.getId()));
+                results.add(context.neuronOutput.get(axon.getId()));
             }
         });
-        return null;
+        return results;
     }
 
     public void compute(DataSet dataSet) {

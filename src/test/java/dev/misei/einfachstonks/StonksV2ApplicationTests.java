@@ -7,37 +7,81 @@ import dev.misei.einfachstonks.math.ErrorMeasure;
 import dev.misei.einfachstonks.network.Context;
 import dev.misei.einfachstonks.network.Network;
 import dev.misei.einfachstonks.network.NetworkFactory;
+import lombok.SneakyThrows;
+import org.apache.tomcat.util.threads.TaskThread;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.*;
 
 @SpringBootTest
 class StonksV2ApplicationTests {
 
-    private Network network;
+
 
     @Test
-    void givenDatasetDouble_whenSum_thenProbabilitySum() {
-        var networkFactory = new NetworkFactory(generateRandomDataByBatch(100), new Context(0.01, 0.9), Algorithm.SIGMOID, ErrorMeasure.LINEAR);
-        network = networkFactory.create(20, 1);
-        network.train(10000);
+    void givenDatasetDouble_whenSum_thenProbabilitySum() throws InterruptedException, ExecutionException {
+        // Create an ExecutorService using virtual threads
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-        network.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>()));
-        network.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>()));
+
+        var future = executor.submit(new Callable<Network>() {
+            @Override
+            public Network call() throws Exception {
+                Network network = NetworkFactory.create(generateRandomDataByBatch(100), new Context(0.01, 0.9),30, 1, Algorithm.SIGMOID, ErrorMeasure.LINEAR);;
+                network.train(10000);
+                return network;
+            }
+        });
+        var future2 = executor.submit(new Callable<Network>() {
+            @Override
+            public Network call() throws Exception {
+                Network network = NetworkFactory.create(generateRandomDataByBatch(100), new Context(0.01, 0.9),10, 2, Algorithm.SIGMOID, ErrorMeasure.LINEAR);;
+                network.train(10000);
+                return network;
+            }
+        });
+
+        var future3 = executor.submit(new Callable<Network>() {
+            @Override
+            public Network call() throws Exception {
+                Network network = NetworkFactory.create(generateRandomDataByBatch(100), new Context(0.01, 0.9),20, 1, Algorithm.LEAKY_RELU, ErrorMeasure.LINEAR);
+                network.train(10000);
+                return network;
+            }
+        });
+
+        var network1 = future.get();
+        var network2 = future2.get();
+        var network3 = future3.get();
+
+        System.out.println(network1.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
+        System.out.println(network1.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+
+        System.out.println(network2.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
+        System.out.println(network2.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+
+        System.out.println(network3.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
+        System.out.println(network3.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+
+
+        executor.shutdownNow();
+        //executor.awaitTermination(1, TimeUnit.HOURS);
+
     }
 
     @Test
     void givenDatasetLogic_whenAND_thenANDBool() {
-        var networkFactory = new NetworkFactory(generateAndAnd_And_Door(), new Context(0.01, 0.9), Algorithm.SIGMOID, ErrorMeasure.LINEAR);
-        network = networkFactory.create(20, 1);
-        network.train(10000);
-
-        network.predict(new DataSet(List.of(0.0, 0.0, 0.0), new ArrayList<>()));
-        network.predict(new DataSet(List.of(0.0, 1.0, 0.0), new ArrayList<>()));
-        network.predict(new DataSet(List.of(1.0, 1.0, 1.0), new ArrayList<>()));
+        //var networkFactory = new NetworkFactory(generateAndAnd_And_Door(), new Context(0.01, 0.9), Algorithm.SIGMOID, ErrorMeasure.LINEAR);
+        //network = networkFactory.create(20, 1);
+        //network.train(10000);
+//
+        //network.predict(new DataSet(List.of(0.0, 0.0, 0.0), new ArrayList<>()));
+        //network.predict(new DataSet(List.of(0.0, 1.0, 0.0), new ArrayList<>()));
+        //network.predict(new DataSet(List.of(1.0, 1.0, 1.0), new ArrayList<>()));
     }
 
     private DataSetList generateAndAnd_And_Door() {

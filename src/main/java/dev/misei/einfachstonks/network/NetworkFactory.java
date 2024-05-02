@@ -1,23 +1,17 @@
 package dev.misei.einfachstonks.network;
 
-import dev.misei.einfachstonks.math.Algorithm;
 import dev.misei.einfachstonks.dataset.DataSetList;
+import dev.misei.einfachstonks.math.Algorithm;
 import dev.misei.einfachstonks.math.ErrorMeasure;
+import lombok.Getter;
 
+@Getter
 public class NetworkFactory {
-    private final DataSetList dataSetList;
-    private final Context context;
-    private final Algorithm algorithm;
-    private final ErrorMeasure errorMeasure;
 
-    public NetworkFactory(DataSetList dataSetList, Context context, Algorithm algorithm, ErrorMeasure errorMeasure) {
-        this.dataSetList = dataSetList;
-        this.context = context;
-        this.algorithm = algorithm;
-        this.errorMeasure = errorMeasure;
+    public NetworkFactory() {
     }
 
-    public Network create(int neuronsPerHiddenLayer, int totalHiddenLayers) {
+    public static Network create(DataSetList dataSetList, Context context, int neuronsPerHiddenLayer, int totalHiddenLayers, Algorithm algorithm, ErrorMeasure errorMeasure) throws CloneNotSupportedException {
         return new Network(dataSetList, context, algorithm, errorMeasure).init(neuronsPerHiddenLayer, totalHiddenLayers);
     }
 }
