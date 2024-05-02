@@ -1,4 +1,4 @@
-package dev.misei.einfachstonks;
+package dev.misei.einfachstonks.dataset;
 
 import lombok.Getter;
 import org.springframework.util.Assert;
@@ -13,11 +13,10 @@ public class DataSetList {
     private int inputSize;
     private int outputSize;
 
-    void accumulateTraining(DataSet dataSet) {
-        if (!dataSets.isEmpty()) {
-            Assert.isTrue(inputSize == dataSet.inputs().size(), "Size must remain equals");
-            Assert.isTrue(outputSize == dataSet.outputs().size(), "Size must remain equals");
-        }
+    public void accumulateTraining(DataSet dataSet) {
+        Assert.isTrue(!dataSet.inputs().isEmpty() && !dataSet.outputs().isEmpty(), "DataSet cannot be empty");
+        Assert.isTrue(dataSets.isEmpty() || (inputSize == dataSet.inputs().size() && outputSize == dataSet.outputs().size()),
+                "Size must remain equals");
 
         dataSets.add(dataSet);
         inputSize = dataSet.inputs().size();

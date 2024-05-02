@@ -1,9 +1,15 @@
 package dev.misei.einfachstonks;
 
+import dev.misei.einfachstonks.dataset.DataSet;
+import dev.misei.einfachstonks.dataset.DataSetList;
+import dev.misei.einfachstonks.math.Algorithm;
+import dev.misei.einfachstonks.math.ErrorMeasure;
+import dev.misei.einfachstonks.network.Context;
+import dev.misei.einfachstonks.network.Network;
+import dev.misei.einfachstonks.network.NetworkFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,21 +21,23 @@ class StonksV2ApplicationTests {
 
     @Test
     void givenDatasetDouble_whenSum_thenProbabilitySum() {
-        network = new Network(generateRandomDataByBatch(100), 10, 2);
+        var networkFactory = new NetworkFactory(generateRandomDataByBatch(100), new Context(0.01, 0.9), Algorithm.SIGMOID, ErrorMeasure.LINEAR);
+        network = networkFactory.create(20, 1);
         network.train(10000);
 
-        network.predictComplete(new DataSet(List.of(0.0, 0.0), new ArrayList<>()));
-        network.predictComplete(new DataSet(List.of(0.5, 0.3), new ArrayList<>()));
+        network.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>()));
+        network.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>()));
     }
 
     @Test
     void givenDatasetLogic_whenAND_thenANDBool() {
-        network = new Network(generateAndAnd_And_Door(), 10, 2);
+        var networkFactory = new NetworkFactory(generateAndAnd_And_Door(), new Context(0.01, 0.9), Algorithm.SIGMOID, ErrorMeasure.LINEAR);
+        network = networkFactory.create(20, 1);
         network.train(10000);
 
-        network.predictComplete(new DataSet(List.of(0.0, 0.0, 0.0), new ArrayList<>()));
-        network.predictComplete(new DataSet(List.of(0.0, 1.0, 0.0), new ArrayList<>()));
-        network.predictComplete(new DataSet(List.of(1.0, 1.0, 1.0), new ArrayList<>()));
+        network.predict(new DataSet(List.of(0.0, 0.0, 0.0), new ArrayList<>()));
+        network.predict(new DataSet(List.of(0.0, 1.0, 0.0), new ArrayList<>()));
+        network.predict(new DataSet(List.of(1.0, 1.0, 1.0), new ArrayList<>()));
     }
 
     private DataSetList generateAndAnd_And_Door() {

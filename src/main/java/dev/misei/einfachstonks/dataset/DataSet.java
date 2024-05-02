@@ -1,4 +1,4 @@
-package dev.misei.einfachstonks;
+package dev.misei.einfachstonks.dataset;
 
 import java.util.List;
 import java.util.stream.Collectors;
