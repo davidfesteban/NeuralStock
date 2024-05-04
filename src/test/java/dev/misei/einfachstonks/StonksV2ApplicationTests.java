@@ -1,14 +1,12 @@
 package dev.misei.einfachstonks;
 
-import dev.misei.einfachstonks.dataset.DataSet;
-import dev.misei.einfachstonks.dataset.DataSetList;
-import dev.misei.einfachstonks.math.Algorithm;
-import dev.misei.einfachstonks.math.ErrorMeasure;
-import dev.misei.einfachstonks.network.Context;
-import dev.misei.einfachstonks.network.Network;
-import dev.misei.einfachstonks.network.NetworkFactory;
-import lombok.SneakyThrows;
-import org.apache.tomcat.util.threads.TaskThread;
+import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
+import dev.misei.einfachstonks.neuralservice.dataset.DataSetList;
+import dev.misei.einfachstonks.neuralservice.math.Algorithm;
+import dev.misei.einfachstonks.neuralservice.math.ErrorMeasure;
+import dev.misei.einfachstonks.neuralservice.network.Context;
+import dev.misei.einfachstonks.neuralservice.network.Network;
+import dev.misei.einfachstonks.neuralservice.network.NetworkFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -20,13 +18,10 @@ import java.util.concurrent.*;
 @SpringBootTest
 class StonksV2ApplicationTests {
 
-
-
     @Test
     void givenDatasetDouble_whenSum_thenProbabilitySum() throws InterruptedException, ExecutionException {
         // Create an ExecutorService using virtual threads
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-
 
         var future = executor.submit(new Callable<Network>() {
             @Override
@@ -58,14 +53,14 @@ class StonksV2ApplicationTests {
         var network2 = future2.get();
         var network3 = future3.get();
 
-        System.out.println(network1.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
-        System.out.println(network1.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+        System.out.println(network1.predict(List.of(0.0, 0.0)));
+        System.out.println(network1.predict(List.of(0.5, 0.3)));
 
-        System.out.println(network2.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
-        System.out.println(network2.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+        System.out.println(network2.predict(List.of(0.0, 0.0)));
+        System.out.println(network2.predict(List.of(0.5, 0.3)));
 
-        System.out.println(network3.predict(new DataSet(List.of(0.0, 0.0), new ArrayList<>())));
-        System.out.println(network3.predict(new DataSet(List.of(0.5, 0.3), new ArrayList<>())));
+        System.out.println(network3.predict(List.of(0.0, 0.0)));
+        System.out.println(network3.predict(List.of(0.5, 0.3)));
 
 
         executor.shutdownNow();
