@@ -1,6 +1,6 @@
 package dev.misei.einfachstonks;
 
-import dev.misei.einfachstonks.neuralservice.NeuralNetworkService;
+import dev.misei.einfachstonks.neuralservice.network.NeuralNetworkService;
 import dev.misei.einfachstonks.stonkservice.StonkService;
 import dev.misei.einfachstonks.stonkservice.model.ETFType;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ public class FullIntegrationTest {
         var internalUUID = stonkService.createETFTracker("Invesco Physical Gold", null, null, "SGLD.L", ETFType.INDIVIDUAL_POSITIVE);
         stonkService.trackETF(internalUUID, LocalDate.now().minusWeeks(60));
         var multimap = stonkService.snapshot(LocalDate.now().minusWeeks(60), LocalDate.now());
-        neuralNetworkService.createNetworks(null);
+        //neuralNetworkService.createNetworks(null);
     }
 
     @DynamicPropertySource

@@ -2,7 +2,7 @@ package dev.misei.einfachstonks.neuralservice.math;
 
 import java.util.Random;
 
-public enum Algorithm {
+public enum AlgorithmType {
     SIGMOID {
         @Override
         public double activate(double x) {

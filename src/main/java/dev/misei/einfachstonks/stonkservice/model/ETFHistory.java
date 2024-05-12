@@ -2,6 +2,7 @@ package dev.misei.einfachstonks.stonkservice.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.lang.NonNull;
 
@@ -21,6 +22,11 @@ public class ETFHistory implements Comparable<ETFHistory> {
     Long volume;
     Double priceHigh;
     Double priceLow;
+
+    public ETFHistory() {
+        priceOpen = Double.NaN;
+        priceClose = Double.NaN;
+    }
 
     @Override
     public int compareTo(@NonNull ETFHistory o) {

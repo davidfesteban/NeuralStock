@@ -2,102 +2,111 @@ package dev.misei.einfachstonks.neuralservice.network;
 
 import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
 import dev.misei.einfachstonks.neuralservice.dataset.DataSetList;
-import dev.misei.einfachstonks.neuralservice.layer.HiddenLayer;
-import dev.misei.einfachstonks.neuralservice.layer.InputLayer;
-import dev.misei.einfachstonks.neuralservice.layer.Layer;
-import dev.misei.einfachstonks.neuralservice.layer.OutputLayer;
-import dev.misei.einfachstonks.neuralservice.math.Algorithm;
-import dev.misei.einfachstonks.neuralservice.math.ErrorMeasure;
+import dev.misei.einfachstonks.neuralservice.network.layer.HiddenLayer;
+import dev.misei.einfachstonks.neuralservice.network.layer.InputLayer;
+import dev.misei.einfachstonks.neuralservice.network.layer.Layer;
+import dev.misei.einfachstonks.neuralservice.network.layer.OutputLayer;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * How does it work? Explanation.
+ * - Input and Output Neurons have an injected value used as Input and Expected values as injectedValue.
+ * - On Forward Propagation: Each Predicted value is published in the Context by a NeuronId. It is stored in Neuron as output.
+ * - On Backward Propagation: Each Gradient and Delta is calculated and published in the Context. Tbh, I still don´t
+ * fully understand the algorithm :)
+ * Disclaimer: The code is really chunky sometimes but this project is taking away my life. Apologies.
+ */
+
 @Slf4j
 @Getter
-public class Network extends NetworkLifecycle implements NetworkService {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class Network {
 
-    private final List<Layer> layers;
+    private final List<NetworkLifecycleComponent> layers = new ArrayList<>();
     private final DataSetList dataSetList;
     private final Context context;
-    private final Algorithm algorithm;
-    private final ErrorMeasure errorMeasure;
 
-    Network(DataSetList dataSetList, Context context, Algorithm algorithm, ErrorMeasure errorMeasure) {
-        this.layers = new ArrayList<>();
-        this.dataSetList = dataSetList;
-        this.context = context;
-        this.algorithm = algorithm;
-        this.errorMeasure = errorMeasure;
+    /**
+     * Creates all internal connections. Adds the number of Layers and Internal Nodes shifting the Output Layer.
+     * An anti-pattern is to have initialization logic of @this within the constructor.
+     */
+    public static Network create(DataSetList dataSetList, Context context, int neuronsPerHiddenLayer, int totalHiddenLayers) {
+        Network network = new Network(dataSetList, context);
+        network.createLayer(new InputLayer(), dataSetList.getInputSize(), 0);
+        network.createLayer(new OutputLayer(), dataSetList.getOutputSize(), 1);
+        network.createAllHidden(neuronsPerHiddenLayer, totalHiddenLayers);
+        network.connectAll();
+        return network;
     }
 
-    Network init(int neuronsPerHiddenLayer, int totalHiddenLayers) {
-        addLayer(new InputLayer(), dataSetList.getInputSize(), 0);
-        addLayer(new OutputLayer(), dataSetList.getOutputSize(), 1);
-        addAllHidden(neuronsPerHiddenLayer, totalHiddenLayers);
-        connectAll();
-        return this;
-    }
-
-    public void train(int totalEpochs) {
+    void train(int totalEpochs) {
         for (int epoch = 0; epoch < totalEpochs; epoch++) {
-            log.info(String.format("==== Epoch-Iteration: %d", epoch));
-
-            dataSetList.getDataSets().forEach(this::compute);
+            dataSetList.getDataSets().forEach(dataSet -> compute(dataSet, true));
         }
     }
 
-    public List<Double> predict(List<Double> inputs) {
+    List<Double> predict(DataSet dataSet, boolean forTraining) {
+        if (forTraining) {
+            this.dataSetList.accumulateTraining(dataSet);
+        }
+
+        return compute(dataSet, forTraining);
+    }
+
+    /**
+     * Step 1: Inject input values and expected ones
+     * Step 2: Forward Propagation
+     * Step 3: Return the predicted values from the context by asking the neuron id
+     * Step 4: Backward Propagation if it was executed for training purposes
+     * Step 5: Clear all gradient calculations as it is a multimap
+     */
+    private List<Double> compute(DataSet dataSet, boolean forTraining) {
         List<Double> results = new ArrayList<>();
-        layers.getFirst().inject(inputs);
-        computeForward(context);
-        layers.getLast().getAxons().forEach(axon -> results.add(context.neuronOutput.get(axon.getId())));
+
+        layers.getFirst().inject(dataSet.inputs());
+        layers.getLast().inject(dataSet.outputs());
+
+        layers.forEach(layer -> layer.computeForward(context));
+
+        ((OutputLayer) layers.getLast()).getNeurons().forEach(neuron -> results.add(context.neuronOutput.get(neuron.getId())));
+
+        if (forTraining) {
+            layers.reversed().forEach(layer -> layer.computeBackward(context));
+        }
+
+        context.weightedGradient.clear();
         return results;
     }
 
-    @Override
-    public void accumulateDataset(DataSet dataSet) {
-        this.dataSetList.accumulateTraining(dataSet);
-    }
-
-    public void compute(DataSet dataSet) {
-        layers.getFirst().inject(dataSet.inputs());
-        layers.getLast().inject(dataSet.outputs());
-        compute(context);
-        context.weightedGradient.clear();
-    }
-
-    @Override
-    public void computeForward(Context context) {
-        layers.forEach(layer -> layer.computeForward(context));
-    }
-
-    @Override
-    public void computeBackward(Context context) {
-        layers.reversed().forEach(layer -> layer.computeBackward(context));
-    }
-
-
-    private void addLayer(Layer layer, int totalNeurons, int position) {
+    private void createLayer(Layer layer, int totalNeurons, int position) {
         for (int i = 0; i < totalNeurons; i++) {
-            layer.addNeuron(algorithm, errorMeasure);
+            layer.addNeuron();
         }
 
         layers.add(position, layer);
     }
 
-    private void addAllHidden(int nodesPerHiddenLayer, int hiddenLayerSize) {
+    /**
+     * Connects all the hidden layers and add them by shifting the output layer
+     */
+    private void createAllHidden(int nodesPerHiddenLayer, int hiddenLayerSize) {
         for (int i = 0; i < hiddenLayerSize; i++) {
-            addLayer(new HiddenLayer(), nodesPerHiddenLayer, layers.size() - 1);
+            createLayer(new HiddenLayer(), nodesPerHiddenLayer, layers.size() - 1);
         }
     }
 
+    /**
+     * Connects all the layer by injecting a reference of N-1 into N.
+     */
     private void connectAll() {
         for (int i = 1; i < layers.size(); i++) {
-            layers.get(i).connectAll(layers.get(i - 1));
+            layers.get(i).connectAll((Layer) layers.get(i - 1));
         }
     }
-
-
 }

@@ -1,6 +1,7 @@
 package dev.misei.einfachstonks.stonkservice;
 
 import dev.misei.einfachstonks.stonkservice.bridge.yahoo.YahooFinanceBridge;
+import dev.misei.einfachstonks.stonkservice.dto.EtfDto;
 import dev.misei.einfachstonks.stonkservice.dto.FinancialDTO;
 import dev.misei.einfachstonks.stonkservice.model.ETFCompositeHistory;
 import dev.misei.einfachstonks.stonkservice.model.ETFHistory;
@@ -10,7 +11,6 @@ import dev.misei.einfachstonks.stonkservice.repository.ETFCompositeHistoryReposi
 import dev.misei.einfachstonks.stonkservice.repository.ETFHistoryRepository;
 import dev.misei.einfachstonks.stonkservice.repository.ETFIdentityRepository;
 import lombok.AllArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
@@ -19,6 +19,7 @@ import org.springframework.util.MultiValueMap;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -88,31 +89,43 @@ public class StonkService {
                 }
                 etfHistoryRepository.save(etfHistory);
                 etfCompositeHistoryRepository.save(calculateCompositeFromHistory(internalNameId, etfHistory,
-                        etfHistoryRepository.findByInternalNameIdAndDayPrecisionLessThanEqual(internalNameId, etfHistory.getDayPrecision())));
+                        etfHistoryRepository.findByInternalNameIdAndDayPrecisionLessThanEqual(internalNameId, etfHistory.getDayPrecision()),
+                        etfHistoryRepository.findByInternalNameIdAndDayPrecision(internalNameId, etfHistory.getDayPrecision().plusDays(1)),
+                        etfHistoryRepository.findByInternalNameIdAndDayPrecision(internalNameId, etfHistory.getDayPrecision().plusWeeks(1)),
+                        etfHistoryRepository.findByInternalNameIdAndDayPrecision(internalNameId, etfHistory.getDayPrecision().plusMonths(1))))
+                ;
             }
         });
 
         var etfIdentity = etfIdentityRepository.findByInternalNameId(internalNameId);
         etfIdentity.setLastUpdate(lastUpdate.get());
+        etfIdentityRepository.deleteByInternalNameId(etfIdentity.getInternalNameId());
         etfIdentityRepository.save(etfIdentity);
     }
 
-    private ETFCompositeHistory calculateCompositeFromHistory(UUID internalNameId, ETFHistory etfHistory, List<ETFHistory> etfHistories) {
+    private ETFCompositeHistory calculateCompositeFromHistory(UUID internalNameId, ETFHistory etfHistory, List<ETFHistory> pastEtfHistories,
+                                                              Optional<ETFHistory> future1Day,
+                                                              Optional<ETFHistory> future1Week,
+                                                              Optional<ETFHistory> future1Month
+    ) {
         return new ETFCompositeHistory(internalNameId,
                 etfHistory.getRefEtfComposite(),
                 etfHistory.getHistoryId(),
-                calculate52WeekLow(etfHistories),
-                calculate52WeekHigh(etfHistories),
-                calculateAverageVolume(etfHistories),
-                calculateETFVolatility(etfHistories));
+                calculate52WeekLow(pastEtfHistories),
+                calculate52WeekHigh(pastEtfHistories),
+                calculateAverageVolume(pastEtfHistories),
+                calculateETFVolatility(pastEtfHistories),
+                future1Day.orElse(new ETFHistory()).getPriceClose(),
+                future1Week.orElse(new ETFHistory()).getPriceClose(),
+                future1Month.orElse(new ETFHistory()).getPriceClose());
     }
 
     public void refreshETFSinceLast(UUID internalNameId) {
         trackETF(internalNameId, etfIdentityRepository.findByInternalNameId(internalNameId).getLastUpdate().plusDays(1));
     }
 
-    public MultiValueMap<ETFType, Pair<ETFHistory, ETFCompositeHistory>> snapshot(LocalDate from, LocalDate to) {
-        MultiValueMap<ETFType, Pair<ETFHistory, ETFCompositeHistory>> result = new LinkedMultiValueMap<>();
+    public MultiValueMap<ETFType, EtfDto> snapshot(LocalDate from, LocalDate to) {
+        MultiValueMap<ETFType, EtfDto> result = new LinkedMultiValueMap<>();
 
         etfIdentityRepository.findAll().forEach(new Consumer<ETFIdentity>() {
             @Override
@@ -121,7 +134,7 @@ public class StonkService {
                 etfHistoryRepository.findByInternalNameId(key).stream().sorted().forEachOrdered(new Consumer<ETFHistory>() {
                     @Override
                     public void accept(ETFHistory etfHistory) {
-                        result.add(ETFType.valueOf(etfIdentity.getEtfType()), Pair.of(etfHistory, etfCompositeHistoryRepository.findByEtfCompositeId(etfHistory.getRefEtfComposite())));
+                        result.add(ETFType.valueOf(etfIdentity.getEtfType()), new EtfDto(etfHistory, etfCompositeHistoryRepository.findByEtfCompositeId(etfHistory.getRefEtfComposite())));
                     }
                 });
             }

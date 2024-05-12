@@ -17,4 +17,7 @@ public class ETFCompositeHistory {
     Double week52High;
     Double averageVolume;
     Double etfVolatility;
+    Double future1DayClosePrice;
+    Double future1WeekClosePrice;
+    Double future1MonthClosePrice;
 }

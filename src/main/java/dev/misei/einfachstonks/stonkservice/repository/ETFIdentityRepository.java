@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.UUID;
 
 public interface ETFIdentityRepository extends MongoRepository<ETFIdentity, String> {
+    long deleteByInternalNameId(UUID internalNameId);
     ETFIdentity findByInternalNameId(UUID internalNameId);
     boolean existsByTicketYahooIgnoreCase(String ticketYahoo);
     boolean existsByWknNameJustEtfIgnoreCase(String wknNameJustEtf);

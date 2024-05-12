@@ -1,6 +1,6 @@
 package dev.misei.einfachstonks.neuralservice.math;
 
-public enum ErrorMeasure {
+public enum ErrorMeasureType {
     LINEAR {
         @Override
         public double calculate(double expected, double actual) {

@@ -7,20 +7,38 @@ import java.util.List;
 public class HistoryToCompositeUtil {
     public static Double calculate52WeekHigh(List<ETFHistory> records) {
         LocalDate oneYearAgo = LocalDate.now().minusWeeks(52);
-        return records.stream()
+        Double result = records.stream()
                 .filter(record -> record.getDayPrecision().isAfter(oneYearAgo))
                 .mapToDouble(ETFHistory::getPriceHigh)
                 .max()
-                .orElse(Double.NaN); // Return NaN if no records
+                .orElse(Double.NaN);
+
+        if(result.isNaN()) {
+            return records.stream()
+                    .mapToDouble(ETFHistory::getPriceHigh)
+                    .max()
+                    .orElse(Double.NaN);
+        }
+
+        return result;
     }
 
     public static Double calculate52WeekLow(List<ETFHistory> records) {
         LocalDate oneYearAgo = LocalDate.now().minusWeeks(52);
-        return records.stream()
+        Double result = records.stream()
                 .filter(record -> record.getDayPrecision().isAfter(oneYearAgo))
                 .mapToDouble(ETFHistory::getPriceLow)
-                .min()
-                .orElse(Double.NaN); // Return NaN if no records
+                .max()
+                .orElse(Double.NaN);
+
+        if(result.isNaN()) {
+            return records.stream()
+                    .mapToDouble(ETFHistory::getPriceLow)
+                    .max()
+                    .orElse(Double.NaN);
+        }
+
+        return result;
     }
 
     public static Double calculateAverageVolume(List<ETFHistory> records) {
@@ -41,4 +59,5 @@ public class HistoryToCompositeUtil {
                 .orElse(Double.NaN);
         return Math.sqrt(variance);
     }
+
 }
