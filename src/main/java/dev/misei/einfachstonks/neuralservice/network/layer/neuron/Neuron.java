@@ -52,8 +52,8 @@ public abstract class Neuron extends NetworkLifecycleComponent {
     @Override
     public void connectAll(Layer inboundLayer) {
         inboundConnections.addAll(inboundLayer.getNeurons()
-                .stream().map(axon ->
-                        new InboundConnection(id, AlgorithmType.random.nextDouble(-2, 2), 0d))
+                .stream().map(neuron ->
+                        new InboundConnection(neuron.getId(), AlgorithmType.random.nextDouble(-2, 2), 0d))
                 .toList());
     }
 

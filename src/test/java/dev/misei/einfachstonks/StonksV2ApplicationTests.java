@@ -31,11 +31,16 @@ class StonksV2ApplicationTests {
         neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
                 new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
                 16, 2);
+        //neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
+        //        new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
+        //        10, 6);
         neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
                 new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
                 3, 4);
-        neuralNetworkService.trainAll(10000);
+        neuralNetworkService.trainAll(40000);
         var bestUUID = neuralNetworkService.testScoreAll(3);
+        System.out.println(bestUUID);
+        System.out.println(new ObjectMapper().writeValueAsString(neuralNetworkService));
         System.out.println(new ObjectMapper().writeValueAsString(
                 neuralNetworkService.predict(bestUUID, new DataSet(List.of(1d, 1d, 1d), List.of()), false)));
 

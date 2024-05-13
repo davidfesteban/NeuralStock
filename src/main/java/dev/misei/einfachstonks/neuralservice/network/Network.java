@@ -48,6 +48,7 @@ public class Network {
     void train(int totalEpochs) {
         for (int epoch = 0; epoch < totalEpochs; epoch++) {
             dataSetList.getDataSets().forEach(dataSet -> compute(dataSet, true));
+            System.out.println(epoch);
         }
     }
 

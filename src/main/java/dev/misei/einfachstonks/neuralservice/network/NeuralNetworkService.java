@@ -10,10 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Service
 @Slf4j
@@ -21,12 +18,14 @@ import java.util.concurrent.TimeUnit;
 public class NeuralNetworkService {
 
     private final ExecutorService executor;
+    private final Stack<Future<?>> pool;
 
     private final ConcurrentHashMap<UUID, Network> networks;
     private final ConcurrentHashMap<UUID, Double> scoreByNetworks;
 
     public NeuralNetworkService() {
         executor = Executors.newVirtualThreadPerTaskExecutor();
+        pool = new Stack<>();
         networks = new ConcurrentHashMap<>();
         scoreByNetworks = new ConcurrentHashMap<>();
     }
@@ -50,13 +49,18 @@ public class NeuralNetworkService {
         return id;
     }
 
-    public void trainAll(int totalEpochs) throws InterruptedException {
-        networks.forEach((uuid, network) ->
-                executor.submit(() -> {
-                    network.train(totalEpochs);
-                }));
+    public void trainAll(int totalEpochs) throws InterruptedException, ExecutionException {
 
-        executor.awaitTermination(24, TimeUnit.HOURS);
+        networks.forEach((uuid, network) ->
+                pool.push(executor.submit(() -> network.train(totalEpochs))));
+
+        awaitForPool();
+    }
+
+    private void awaitForPool() throws ExecutionException, InterruptedException {
+        while (!pool.empty()) {
+            pool.pop().get();
+        }
     }
 
     public void train(UUID networkId, int totalEpochs) {
@@ -69,8 +73,8 @@ public class NeuralNetworkService {
         return network.predict(dataSet, forTraining);
     }
 
-    public UUID testScoreAll(int snapshotPopulation) throws InterruptedException {
-        networks.forEach((uuid, network) -> executor.submit(() -> {
+    public UUID testScoreAll(int snapshotPopulation) throws InterruptedException, ExecutionException {
+        networks.forEach((uuid, network) -> pool.push(executor.submit(() -> {
             List<Double> errorCounter = new ArrayList<>();
 
             var datasetCopy = new ArrayList<>(network.getDataSetList().getDataSets());
@@ -82,15 +86,16 @@ public class NeuralNetworkService {
 
                 errorCounter.add(error);
             });
-            var score = errorCounter.stream().reduce(Double::sum).orElse(0d) / errorCounter.size();
+            var score = Math.abs(errorCounter.stream().reduce(Double::sum).orElse(0d) / errorCounter.size());
 
             log.info(uuid + " " + score);
 
             scoreByNetworks.put(uuid, score);
-        }));
+        })));
 
+        awaitForPool();
 
-        executor.awaitTermination(24, TimeUnit.HOURS);
+        //executor.awaitTermination(24, TimeUnit.HOURS);
 
         Map.Entry<UUID, Double> bestEntry = scoreByNetworks.entrySet()
                 .stream()
