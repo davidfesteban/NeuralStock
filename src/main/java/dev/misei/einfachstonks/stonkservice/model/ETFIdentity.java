@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Document
@@ -15,9 +16,12 @@ import java.util.UUID;
 public class ETFIdentity {
     UUID internalNameId;
     String etfName;
-    String isinJustEtf;
-    String wknNameJustEtf;
-    String ticketYahoo;
-    String etfType;
+    ETFBridgeType etfBridgeType;
+    String ticker;
+    ETFType etfType;
     LocalDate lastUpdate;
+
+    List<Double> asList() {
+        return List.of((double) etfType.ordinal());
+    }
 }

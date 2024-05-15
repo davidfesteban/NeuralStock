@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -42,7 +43,9 @@ class StonksV2ApplicationTests {
         System.out.println(bestUUID);
         System.out.println(new ObjectMapper().writeValueAsString(neuralNetworkService));
         System.out.println(new ObjectMapper().writeValueAsString(
-                neuralNetworkService.predict(bestUUID, new DataSet(List.of(1d, 1d, 1d), List.of()), false)));
+                neuralNetworkService.predict(bestUUID, new DataSet(List.of(1d, 1d, 1d,1d,1d), List.of()), false)));
+        System.out.println(new ObjectMapper().writeValueAsString(
+                neuralNetworkService.predict(bestUUID, new DataSet(List.of(0d, 0d, 1d,1d,1d), List.of()), false)));
 
     }
 
@@ -60,14 +63,26 @@ class StonksV2ApplicationTests {
     private DataSetList generateAndAnd_And_Door() {
         DataSetList dataSetList = new DataSetList();
 
-        dataSetList.accumulateTraining(new DataSet(List.of(0.0, 0.0, 0.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(0.0, 0.0, 1.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(0.0, 1.0, 0.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(0.0, 1.0, 1.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(1.0, 0.0, 0.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(1.0, 0.0, 1.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(1.0, 1.0, 0.0), List.of(0.0)));
-        dataSetList.accumulateTraining(new DataSet(List.of(1.0, 1.0, 1.0), List.of(1.0)));
+        // Generate all combinations for 10-input AND gate
+        int totalCombinations = (int) Math.pow(2, 5); // 1024 combinations
+        for (int i = 0; i < totalCombinations; i++) {
+            List<Double> inputs = new ArrayList<>();
+            boolean allOnes = true;
+
+            // Convert the integer to binary and check each bit
+            for (int j = 0; j < 5; j++) {
+                if ((i & (1 << j)) != 0) {
+                    inputs.add(0, 1.0); // Push to the beginning to reverse order
+                } else {
+                    inputs.add(0, 0.0); // Push to the beginning to reverse order
+                    allOnes = false;
+                }
+            }
+
+            // Determine output based on whether all inputs are 1.0
+            double output = allOnes ? 1.0 : 0.0;
+            dataSetList.accumulateTraining(new DataSet(inputs, List.of(output)));
+        }
 
         return dataSetList;
     }

@@ -2,11 +2,11 @@ package dev.misei.einfachstonks.stonkservice.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.lang.NonNull;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Document
@@ -23,13 +23,13 @@ public class ETFHistory implements Comparable<ETFHistory> {
     Double priceHigh;
     Double priceLow;
 
-    public ETFHistory() {
-        priceOpen = Double.NaN;
-        priceClose = Double.NaN;
-    }
-
     @Override
     public int compareTo(@NonNull ETFHistory o) {
         return this.dayPrecision.compareTo(o.dayPrecision);
+    }
+
+    public List<Double> asList() {
+        return List.of((double) dayPrecision.getDayOfWeek().getValue(), (double) dayPrecision.getDayOfMonth(), (double) dayPrecision.getDayOfYear(),
+                priceOpen, priceClose, volume.doubleValue(), priceHigh, priceLow);
     }
 }

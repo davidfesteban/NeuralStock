@@ -2,7 +2,7 @@ package dev.misei.einfachstonks.utils;
 
 import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
 import dev.misei.einfachstonks.neuralservice.dataset.DataSetList;
-import dev.misei.einfachstonks.stonkservice.dto.EtfDto;
+import dev.misei.einfachstonks.stonkservice.dto.ETFDetailDTO;
 import dev.misei.einfachstonks.stonkservice.model.ETFType;
 import lombok.experimental.UtilityClass;
 import org.springframework.util.MultiValueMap;
@@ -16,19 +16,19 @@ import java.util.function.Consumer;
 @UtilityClass
 public class StonksMapper {
 
-    List<DataSetList> toDataSetList(MultiValueMap<ETFType, EtfDto> snapshot) {
+    List<DataSetList> toDataSetList(MultiValueMap<ETFType, ETFDetailDTO> snapshot) {
         List<DataSetList> dataSetList = new ArrayList<>();
         List<Double> inputs = new ArrayList<>();
         AtomicReference<Double> outputs1Day = new AtomicReference<>(0d);
         AtomicReference<Double> outputs1Week = new AtomicReference<>(0d);
         AtomicReference<Double> outputs1Month = new AtomicReference<>(0d);
-        snapshot.forEach(new BiConsumer<ETFType, List<EtfDto>>() {
+        snapshot.forEach(new BiConsumer<ETFType, List<ETFDetailDTO>>() {
             @Override
-            public void accept(ETFType etfType, List<EtfDto> etfDtos) {
+            public void accept(ETFType etfType, List<ETFDetailDTO> etfDtos) {
                 inputs.add((double) etfType.ordinal());
-                etfDtos.forEach(new Consumer<EtfDto>() {
+                etfDtos.forEach(new Consumer<ETFDetailDTO>() {
                     @Override
-                    public void accept(EtfDto etfDto) {
+                    public void accept(ETFDetailDTO etfDto) {
                         //TODO Refactor and make sure it is not Nan
                        //inputs.add(etfDto.history().getPriceClose());
                        //inputs.add(etfDto.history().getPriceOpen());
