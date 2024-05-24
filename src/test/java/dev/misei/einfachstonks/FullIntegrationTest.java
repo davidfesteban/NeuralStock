@@ -76,10 +76,10 @@ public class FullIntegrationTest {
 
         var uuid = neuralNetworkService.createNetwork(dataSetList, new Context(learningRatio, momentum, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
                 neuronsPerHiddenLayer, totalHiddenLayers);
-        neuralNetworkService.trainAll(10000);
+        neuralNetworkService.trainAll(50);
 
 
-        var multimap2 = stonkService.singleSnapshot(LocalDate.of(2025, 5, 15));
+        var multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 15));
         multimap2.forEach(new BiConsumer<ETFType, List<ETFDetailDTO>>() {
             @Override
             public void accept(ETFType etfType, List<ETFDetailDTO> etfDetailDTOS) {
@@ -99,7 +99,7 @@ public class FullIntegrationTest {
             }
         });
 
-        multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 15));
+        multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 16));
         multimap2.forEach(new BiConsumer<ETFType, List<ETFDetailDTO>>() {
             @Override
             public void accept(ETFType etfType, List<ETFDetailDTO> etfDetailDTOS) {
