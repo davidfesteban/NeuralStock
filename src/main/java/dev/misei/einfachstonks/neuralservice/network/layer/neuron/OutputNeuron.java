@@ -11,7 +11,13 @@ public class OutputNeuron extends Neuron {
 
     @Override
     protected Double calculateGradient(Context context) {
-        return context.errorMeasureType.calculate(injectedTarget, this.output) * context.algorithmType.derivative(this.output);
+        var result = context.errorMeasureType.calculate(injectedTarget, this.output) * context.algorithmType.derivative(this.output);
+
+        //if(Double.isNaN(result)) {
+            //System.out.println(result + "Gradient Neuron");
+        //}
+
+        return result;
     }
 
     @Override

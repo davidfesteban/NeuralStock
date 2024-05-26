@@ -30,7 +30,14 @@ public enum AlgorithmType {
 
         @Override
         public double activate(double x) {
-            return x > 0 ? x : alpha * x;
+            //TODO: This converts the number so small that it is impossible for the machine to follow it.
+            var result = x > 0 ? x : alpha * x;
+
+            //if(Double.isNaN(result))  {
+            //    return 0.00000000001;
+            //}
+
+            return result;
         }
 
         @Override

@@ -11,6 +11,7 @@ import dev.misei.einfachstonks.neuralservice.network.NeuralNetworkService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 @SpringBootTest
+@DirtiesContext
 class StonksV2ApplicationTests {
 
     @Autowired
@@ -25,28 +27,34 @@ class StonksV2ApplicationTests {
 
     @Test
     void givenDatasetDouble_whenSum_thenProbabilitySum() throws InterruptedException, ExecutionException, JsonProcessingException {
-        neuralNetworkService.createNetwork(generateAndAnd_And_Door());
-        neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
-                new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
-                6, 1);
-        neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
-                new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
-                16, 2);
+        //neuralNetworkService.createNetwork(generateAndAnd_And_Door(5));
+        //neuralNetworkService.createNetwork(generateAndAnd_And_Door(5),
+        //        new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
+        //        6, 1);
+        //neuralNetworkService.createNetwork(generateAndAnd_And_Door(5),
+        //        new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
+        //        16, 2);
         //neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
         //        new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
         //        10, 6);
-        neuralNetworkService.createNetwork(generateAndAnd_And_Door(),
-                new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
-                3, 4);
-        neuralNetworkService.trainAll(40000);
-        var bestUUID = neuralNetworkService.testScoreAll(3);
-        System.out.println(bestUUID);
-        System.out.println(new ObjectMapper().writeValueAsString(neuralNetworkService));
-        System.out.println(new ObjectMapper().writeValueAsString(
-                neuralNetworkService.predict(bestUUID, new DataSet(List.of(1d, 1d, 1d,1d,1d), List.of()), false)));
-        System.out.println(new ObjectMapper().writeValueAsString(
-                neuralNetworkService.predict(bestUUID, new DataSet(List.of(0d, 0d, 1d,1d,1d), List.of()), false)));
+        //neuralNetworkService.createNetwork(generateAndAnd_And_Door(5),
+        //        new Context(0.01, 0.9, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
+        //        3, 4);
+        //neuralNetworkService.trainAll(40000);
+        //var bestUUID = neuralNetworkService.testScoreAll(3);
+        //System.out.println(bestUUID);
+        //System.out.println(new ObjectMapper().writeValueAsString(neuralNetworkService));
+    }
 
+    @Test
+    void givenDatasetDouble_whenSum() throws InterruptedException, ExecutionException, JsonProcessingException {
+        var id = neuralNetworkService.createNetwork(generateAndAnd_And_Door(15),
+                new Context(0.01, 0.9, AlgorithmType.SIGMOID, ErrorMeasureType.LINEAR),
+                20, 6);
+
+        neuralNetworkService.train(id, 3);
+        System.out.println(new ObjectMapper().writeValueAsString(
+                neuralNetworkService.predict(id, new DataSet(List.of(1d,1d,1d,1d,1d,1d,1d,1d,1d,1d), List.of()), false)));
     }
 
     @Test
@@ -60,17 +68,16 @@ class StonksV2ApplicationTests {
         //network.predict(new DataSet(List.of(1.0, 1.0, 1.0), new ArrayList<>()));
     }
 
-    private DataSetList generateAndAnd_And_Door() {
+    private DataSetList generateAndAnd_And_Door(int inputSize) {
         DataSetList dataSetList = new DataSetList();
 
-        // Generate all combinations for 10-input AND gate
-        int totalCombinations = (int) Math.pow(2, 5); // 1024 combinations
+        int totalCombinations = (int) Math.pow(2, inputSize);
         for (int i = 0; i < totalCombinations; i++) {
             List<Double> inputs = new ArrayList<>();
             boolean allOnes = true;
 
             // Convert the integer to binary and check each bit
-            for (int j = 0; j < 5; j++) {
+            for (int j = 0; j < inputSize; j++) {
                 if ((i & (1 << j)) != 0) {
                     inputs.add(0, 1.0); // Push to the beginning to reverse order
                 } else {

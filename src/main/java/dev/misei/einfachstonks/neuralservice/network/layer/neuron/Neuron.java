@@ -33,7 +33,18 @@ public abstract class Neuron extends NetworkLifecycleComponent {
 
         for (InboundConnection inboundConnection : inboundConnections) {
             var output = context.neuronOutput.get(inboundConnection.originId());
+            if(output.isNaN()) {
+                //System.out.println("NAN");
+            }
             preActivation += output * inboundConnection.weight();
+            if(Double.isNaN(preActivation)) {
+                //System.out.println("NAN");
+                //preActivation = 0;
+            }
+        }
+
+        if(output.isNaN()) {
+            //System.out.println("NAN");
         }
 
         this.output = context.algorithmType.activate(preActivation + bias);
@@ -66,8 +77,16 @@ public abstract class Neuron extends NetworkLifecycleComponent {
         inboundConnections = inboundConnections.stream().map(inboundConnection -> {
             double oldWeightDelta = inboundConnection.weightDelta();
             var weightDelta = context.learningRatio * gradient * context.neuronOutput.get(inboundConnection.originId());
-            return inboundConnection.withWeightDelta(weightDelta)
+            var newInbound = inboundConnection.withWeightDelta(weightDelta)
                     .withWeight(inboundConnection.weight() + weightDelta + (context.momentum * oldWeightDelta));
+
+            if(Double.isNaN(newInbound.weight())) {
+                //System.out.println("NAN");
+                //System.out.println(inboundConnection.weight());
+                //System.out.println(gradient);
+            }
+
+            return newInbound;
         }).toList();
     }
 }
