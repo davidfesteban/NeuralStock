@@ -112,17 +112,14 @@ public class StonkService {
     public MultiValueMap<ETFType, ETFDetailDTO> returnAll() {
         MultiValueMap<ETFType, ETFDetailDTO> result = new LinkedMultiValueMap<>();
 
-        etfIdentityRepository.findAll().forEach(new Consumer<ETFIdentity>() {
-            @Override
-            public void accept(ETFIdentity etfIdentity) {
-                var key = etfIdentity.getInternalNameId();
-                etfHistoryRepository.findByInternalNameId(key).stream().sorted().forEachOrdered(new Consumer<ETFHistory>() {
-                    @Override
-                    public void accept(ETFHistory etfHistory) {
-                        result.add(etfIdentity.getEtfType(), new ETFDetailDTO(etfHistory, etfCompositeHistoryRepository.findByEtfCompositeId(etfHistory.getRefEtfComposite())));
-                    }
-                });
-            }
+        etfIdentityRepository.findAll().forEach(etfIdentity -> {
+            var key = etfIdentity.getInternalNameId();
+            etfHistoryRepository.findByInternalNameId(key).stream().sorted().forEachOrdered(new Consumer<ETFHistory>() {
+                @Override
+                public void accept(ETFHistory etfHistory) {
+                    result.add(etfIdentity.getEtfType(), new ETFDetailDTO(etfHistory, etfCompositeHistoryRepository.findByEtfCompositeId(etfHistory.getRefEtfComposite())));
+                }
+            });
         });
 
         return result;

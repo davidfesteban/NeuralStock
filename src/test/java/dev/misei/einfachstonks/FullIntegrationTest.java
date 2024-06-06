@@ -71,35 +71,15 @@ public class FullIntegrationTest {
 
         var learningRatio = 0.01;
         var momentum = 0.9;
-        var neuronsPerHiddenLayer = 20;
+        var neuronsPerHiddenLayer = 15;
         int totalHiddenLayers = 3;
 
-        var uuid = neuralNetworkService.createNetwork(dataSetList, new Context(learningRatio, momentum, AlgorithmType.LEAKY_RELU, ErrorMeasureType.LINEAR),
+        var uuid = neuralNetworkService.createNetwork(dataSetList, new Context(learningRatio, momentum, AlgorithmType.SIGMOID, ErrorMeasureType.LINEAR),
                 neuronsPerHiddenLayer, totalHiddenLayers);
         neuralNetworkService.trainAll(50);
 
 
-        var multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 15));
-        multimap2.forEach(new BiConsumer<ETFType, List<ETFDetailDTO>>() {
-            @Override
-            public void accept(ETFType etfType, List<ETFDetailDTO> etfDetailDTOS) {
-                etfDetailDTOS.forEach(new Consumer<ETFDetailDTO>() {
-                    @Override
-                    public void accept(ETFDetailDTO etfDetailDTO) {
-                        List<Double> inputs = new ArrayList<>(etfDetailDTO.history().asList());
-                        inputs.addAll(etfDetailDTO.composite().asList());
-
-                        try {
-                            System.out.println(neuralNetworkService.predict(uuid, new DataSet(inputs, List.of()), false));
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-            }
-        });
-
-        multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 16));
+        var multimap2 = stonkService.singleSnapshot(LocalDate.of(2024, 5, 26));
         multimap2.forEach(new BiConsumer<ETFType, List<ETFDetailDTO>>() {
             @Override
             public void accept(ETFType etfType, List<ETFDetailDTO> etfDetailDTOS) {
