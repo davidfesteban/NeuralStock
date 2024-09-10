@@ -25,22 +25,20 @@ We already computed the following during the forward pass:
 - **Loss function** (MSE):
 
 ```math
-\[
 L = \frac{1}{2} \left( (0.5532 - 0.8)^2 + (0.6321 - 0.4)^2 \right) = \frac{1}{2} \times 0.061 = 0.0305
-\]
 ```
 
 ## Step 2: Backpropagation
 
 Now, we perform backpropagation to adjust the weights and biases. We will calculate the gradients layer by layer using the chain rule.
 
-### a. Gradients for the output layer (for weights \( w_{3,11}, w_{3,12}, w_{3,21}, w_{3,22} \))
+### a. Gradients for the output layer (for weights $\( w_{3,11}, w_{3,12}, w_{3,21}, w_{3,22} \$))
 
 We will calculate the gradients of the loss with respect to the weights between the second hidden layer and the output layer.
 
-#### For \( O_1 \):
+#### For $\( O_1 \)$:
 
-1. **Gradient of the loss with respect to the output activation \( a_{3,1} \)**:
+1. **Gradient of the loss with respect to the output activation $\( a_{3,1} \$)**:
 
 \[
 \frac{\partial L}{\partial a_{3,1}} = a_{3,1} - y_1 = 0.5532 - 0.8 = -0.2468
