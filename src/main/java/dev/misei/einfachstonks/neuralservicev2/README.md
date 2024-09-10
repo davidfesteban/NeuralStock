@@ -7,8 +7,8 @@ This document walks through the process of forward propagation, calculating the 
 We already computed the following during the forward pass:
 
 - **Activations of the first hidden layer**:
-    - $\( a_{1,1} = 0.6457 \) (neuron \( H_1 \))
-    - $\( a_{1,2} = 0.3775 \) (neuron \( H_2 \))
+    - $\( a_{1,1} = 0.6457 \) (neuron \( H_1 \))$
+    - $\( a_{1,2} = 0.3775 \) (neuron \( H_2 \))$
 
 - **Activations of the second hidden layer**:
     - \( a_{2,1} = 0.5657 \) (neuron \( H_{2,1} \))
