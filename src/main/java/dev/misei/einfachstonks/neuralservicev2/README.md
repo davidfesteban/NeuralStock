@@ -38,11 +38,11 @@ We will calculate the gradients of the loss with respect to the weights between 
 
 #### For $\( O_1 \)$:
 
-1. **Gradient of the loss with respect to the output activation $\( a_{3,1} \$)**:
+1. **Gradient of the loss with respect to the output activation $\( a_{3,1} \)$**:
 
-\[
+$\[
 \frac{\partial L}{\partial a_{3,1}} = a_{3,1} - y_1 = 0.5532 - 0.8 = -0.2468
-\]
+\]$
 
 2. **Derivative of the sigmoid function for \( z_{3,1} \)**:
 
