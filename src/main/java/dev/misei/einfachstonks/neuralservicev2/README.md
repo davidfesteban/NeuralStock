@@ -44,194 +44,119 @@ $\[
 \frac{\partial L}{\partial a_{3,1}} = a_{3,1} - y_1 = 0.5532 - 0.8 = -0.2468
 \]$
 
-2. **Derivative of the sigmoid function for \( z_{3,1} \)**:
+2. **Derivative of the sigmoid function for $\( z_{3,1} \)$**:
 
-\[
+$\[
 \frac{\partial a_{3,1}}{\partial z_{3,1}} = a_{3,1} \times (1 - a_{3,1}) = 0.5532 \times (1 - 0.5532) = 0.2471
-\]
+\]$
 
-3. **Gradient of the loss with respect to \( z_{3,1} \)**:
+3. **Gradient of the loss with respect to $\( z_{3,1} \)$**:
 
-\[
+$\[
 \frac{\partial L}{\partial z_{3,1}} = \frac{\partial L}{\partial a_{3,1}} \times \frac{\partial a_{3,1}}{\partial z_{3,1}} = -0.2468 \times 0.2471 \approx -0.0610
-\]
+\]$
 
-4. **Gradients for the weights \( w_{3,11} \) and \( w_{3,21} \)** (for neuron \( O_1 \)):
+4. **Gradients for the weights $\( w_{3,11} \)$ and $\( w_{3,21} \)$** (for neuron $\( O_1 \)$):
 
-\[
+$\[
 \frac{\partial L}{\partial w_{3,11}} = \frac{\partial L}{\partial z_{3,1}} \times a_{2,1} = -0.0610 \times 0.5657 \approx -0.0345
-\]
+\]$
 
-\[
+$\[
 \frac{\partial L}{\partial w_{3,21}} = \frac{\partial L}{\partial z_{3,1}} \times a_{2,2} = -0.0610 \times 0.4979 \approx -0.0304
-\]
+\]$
 
-5. **Gradient for the bias \( b_{3,1} \) (for neuron \( O_1 \))**:
+5. **Gradient for the bias $\( b_{3,1} \)$ (for neuron $\( O_1 \)$)**:
 
-\[
+$\[
 \frac{\partial L}{\partial b_{3,1}} = \frac{\partial L}{\partial z_{3,1}} = -0.0610
-\]
+\]$
 
-#### For \( O_2 \):
 
-1. **Gradient of the loss with respect to the output activation \( a_{3,2} \)**:
-
-\[
-\frac{\partial L}{\partial a_{3,2}} = a_{3,2} - y_2 = 0.6321 - 0.4 = 0.2321
-\]
-
-2. **Derivative of the sigmoid function for \( z_{3,2} \)**:
-
-\[
-\frac{\partial a_{3,2}}{\partial z_{3,2}} = a_{3,2} \times (1 - a_{3,2}) = 0.6321 \times (1 - 0.6321) = 0.2325
-\]
-
-3. **Gradient of the loss with respect to \( z_{3,2} \)**:
-
-\[
-\frac{\partial L}{\partial z_{3,2}} = \frac{\partial L}{\partial a_{3,2}} \times \frac{\partial a_{3,2}}{\partial z_{3,2}} = 0.2321 \times 0.2325 \approx 0.0539
-\]
-
-4. **Gradients for the weights \( w_{3,12} \) and \( w_{3,22} \)** (for neuron \( O_2 \)):
-
-\[
-\frac{\partial L}{\partial w_{3,12}} = \frac{\partial L}{\partial z_{3,2}} \times a_{2,1} = 0.0539 \times 0.5657 \approx 0.0305
-\]
-
-\[
-\frac{\partial L}{\partial w_{3,22}} = \frac{\partial L}{\partial z_{3,2}} \times a_{2,2} = 0.0539 \times 0.4979 \approx 0.0268
-\]
-
-5. **Gradient for the bias \( b_{3,2} \) (for neuron \( O_2 \))**:
-
-\[
-\frac{\partial L}{\partial b_{3,2}} = \frac{\partial L}{\partial z_{3,2}} = 0.0539
-\]
-
-### b. Gradients for the second hidden layer (for weights \( w_{2,11}, w_{2,12}, w_{2,21}, w_{2,22} \))
+### b. Gradients for the second hidden layer (for weights $\( w_{2,11}, w_{2,12}, w_{2,21}, w_{2,22} \)$)
 
 Now we calculate the gradients for the second hidden layer. These gradients are affected by both output neurons \( O_1 \) and \( O_2 \).
 
-#### For \( H_{2,1} \):
+#### For $\( H_{2,1} \)$:
 
-1. **Gradient of the loss with respect to \( z_{2,1} \)** (combining gradients from both output neurons):
+1. **Gradient of the loss with respect to $\( z_{2,1} \)$** (combining gradients from both output neurons):
 
-\[
+$\[
 \frac{\partial L}{\partial z_{2,1}} = \left( \frac{\partial L}{\partial z_{3,1}} \times w_{3,11} \right) + \left( \frac{\partial L}{\partial z_{3,2}} \times w_{3,12} \right)
-\]
+\]$
 
-\[
+$\[
 \frac{\partial L}{\partial z_{2,1}} = (-0.0610 \times 0.6) + (0.0539 \times 0.7) = -0.0366 + 0.0377 = 0.0011
-\]
+\]$
 
-2. **Derivative of the sigmoid function for \( z_{2,1} \)**:
+2. **Derivative of the sigmoid function for $\( z_{2,1} \)$**:
 
-\[
+$\[
 \frac{\partial a_{2,1}}{\partial z_{2,1}} = a_{2,1} \times (1 - a_{2,1}) = 0.5657 \times (1 - 0.5657) = 0.2456
-\]
+\]$
 
-3. **Gradient of the loss with respect to \( z_{2,1} \)**:
+3. **Gradient of the loss with respect to $\( z_{2,1} \)$**:
 
-\[
+$\[
 \frac{\partial L}{\partial z_{2,1}} = 0.0011 \times 0.2456 = 0.0003
-\]
+\]$
 
-4. **Gradients for the weights \( w_{2,11} \) and \( w_{2,12} \)**:
+4. **Gradients for the weights $\( w_{2,11} \)$ and $\( w_{2,12} \)$**:
 
-\[
+$\[
 \frac{\partial L}{\partial w_{2,11}} = \frac{\partial L}{\partial z_{2,1}} \times a_{1,1} = 0.0003 \times 0.6457 = 0.0002
-\]
+\]$
 
-\[
+$\[
 \frac{\partial L}{\partial w_{2,12}} = \frac{\partial L}{\partial z_{2,1}} \times a_{1,2} = 0.0003 \times 0.3775 = 0.0001
-\]
+\]$
 
-5. **Gradient for the bias \( b_{2,1} \)**:
+5. **Gradient for the bias $\( b_{2,1} \)$**:
 
-\[
+$\[
 \frac{\partial L}{\partial b_{2,1}} = 0.0003
-\]
-
-#### For \( H_{2,2} \):
-
-1. **Gradient of the loss with respect to \( z_{2,2} \)**:
-
-\[
-\frac{\partial L}{\partial z_{2,2}} = \left( \frac{\partial L}{\partial z_{3,1}} \times w_{3,21} \right) + \left( \frac{\partial L}{\partial z_{3,2}} \times w_{3,22} \right)
-\]
-
-\[
-\frac{\partial L}{\partial z_{2,2}} = (-0.0610 \times -0.5) + (0.0539 \times 0.4) = 0.0305 + 0.0216 = 0.0521
-\]
-
-2. **Derivative of the sigmoid function for \( z_{2,2} \)**:
-
-\[
-\frac{\partial a_{2,2}}{\partial z_{2,2}} = a_{2,2} \times (1 - a_{2,2}) = 0.4979 \times (1 - 0.4979) = 0.2499
-\]
-
-3. **Gradient of the loss with respect to \( z_{2,2} \)**:
-
-\[
-\frac{\partial L}{\partial z_{2,2}} = 0.0521 \times 0.2499 \approx 0.0130
-\]
-
-4. **Gradients for the weights \( w_{2,21} \) and \( w_{2,22} \)**:
-
-\[
-\frac{\partial L}{\partial w_{2,21}} = 0.0130 \times 0.6457 = 0.0084
-\]
-
-\[
-\frac{\partial L}{\partial w_{2,22}} = 0.0130 \times 0.3775 = 0.0049
-\]
-
-5. **Gradient for the bias \( b_{2,2} \)**:
-
-\[
-\frac{\partial L}{\partial b_{2,2}} = 0.0130
-\]
+\]$
 
 ## Step 3: Update Weights and Biases
 
-Using gradient descent, we update the weights and biases. Assume the learning rate \( \eta = 0.1 \).
+Using gradient descent, we update the weights and biases. Assume the learning rate $\( \eta = 0.1 \)$.
 
 ### Update for output layer:
 
-\[
+$\[
 w_{3,11} \leftarrow w_{3,11} - \eta \times \frac{\partial L}{\partial w_{3,11}} = 0.6 - 0.1 \times (-0.0345) = 0.6035
-\]
+\]$
 
-\[
+$\[
 w_{3,21} \leftarrow w_{3,21} - \eta \times \frac{\partial L}{\partial w_{3,21}} = -0.5 - 0.1 \times (-0.0304) = -0.4970
-\]
+\]$
 
-\[
+$\[
 w_{3,12} \leftarrow w_{3,12} - \eta \times \frac{\partial L}{\partial w_{3,12}} = 0.7 - 0.1 \times 0.0305 = 0.6969
-\]
+\]$
 
-\[
+$\[
 w_{3,22} \leftarrow w_{3,22} - \eta \times \frac{\partial L}{\partial w_{3,22}} = 0.4 - 0.1 \times 0.0268 = 0.3973
-\]
+\]$
 
 ### Update for hidden layer 2:
 
-\[
+$\[
 w_{2,11} \leftarrow w_{2,11} - \eta \times \frac{\partial L}{\partial w_{2,11}} = 0.2 - 0.1 \times 0.0002 = 0.19998
-\]
+\]$
 
-\[
+$\[
 w_{2,12} \leftarrow w_{2,12} - \eta \times \frac{\partial L}{\partial w_{2,12}} = 0.3 - 0.1 \times 0.0001 = 0.29999
-\]
+\]$
 
-\[
+$\[
 w_{2,21} \leftarrow w_{2,21} - \eta \times \frac{\partial L}{\partial w_{2,21}} = -0.2 - 0.1 \times 0.0084 = -0.20084
-\]
+\]$
 
-\[
+$\[
 w_{2,22} \leftarrow w_{2,22} - \eta \times \frac{\partial L}{\partial w_{2,22}} = 0.4 - 0.1 \times 0.0049 = 0.39951
-\]
+\]$
 
 ---
 
-This process of backpropagation, where we calculate the gradients and update the weights and biases, continues until the network converges (i.e., the loss reaches a minimum).
+Have fun.
