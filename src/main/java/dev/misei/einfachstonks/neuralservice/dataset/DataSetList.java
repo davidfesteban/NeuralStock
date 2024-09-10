@@ -21,6 +21,8 @@ public class DataSetList {
                 "Size must remain equals");
 
         dataSets.add(dataSet);
+
+        //It must always the same
         inputSize = dataSet.inputs().size();
         outputSize = dataSet.outputs().size();
 

@@ -36,7 +36,7 @@ public class Network {
      * Creates all internal connections. Adds the number of Layers and Internal Nodes shifting the Output Layer.
      * An anti-pattern is to have initialization logic of @this within the constructor.
      */
-    public static Network create(DataSetList dataSetList, Context context, int neuronsPerHiddenLayer, int totalHiddenLayers) {
+    public static Network create(DataSetList dataSetList, Context context, /*Shape shape*/ int neuronsPerHiddenLayer, int totalHiddenLayers) {
         Network network = new Network(dataSetList, context);
         network.createLayer(new InputLayer(), dataSetList.getInputSize(), 0);
         network.createLayer(new OutputLayer(), dataSetList.getOutputSize(), 1);
@@ -85,14 +85,6 @@ public class Network {
         return results;
     }
 
-    private void createLayer(Layer layer, int totalNeurons, int position) {
-        for (int i = 0; i < totalNeurons; i++) {
-            layer.addNeuron();
-        }
-
-        layers.add(position, layer);
-    }
-
     /**
      * Connects all the hidden layers and add them by shifting the output layer
      */
@@ -100,6 +92,14 @@ public class Network {
         for (int i = 0; i < hiddenLayerSize; i++) {
             createLayer(new HiddenLayer(), nodesPerHiddenLayer, layers.size() - 1);
         }
+    }
+
+    private void createLayer(Layer layer, int totalNeurons, int position) {
+        for (int i = 0; i < totalNeurons; i++) {
+            layer.addNeuron();
+        }
+
+        layers.add(position, layer);
     }
 
     /**
