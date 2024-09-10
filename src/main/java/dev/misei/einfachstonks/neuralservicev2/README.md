@@ -11,22 +11,24 @@ We already computed the following during the forward pass:
     - $\( a_{1,2} = 0.3775 \) (neuron \( H_2 \))$
 
 - **Activations of the second hidden layer**:
-    - \( a_{2,1} = 0.5657 \) (neuron \( H_{2,1} \))
-    - \( a_{2,2} = 0.4979 \) (neuron \( H_{2,2} \))
+    - $\( a_{2,1} = 0.5657 \) (neuron \( H_{2,1} \))$
+    - $\( a_{2,2} = 0.4979 \) (neuron \( H_{2,2} \))$
 
 - **Activations of the output layer**:
-    - \( a_{3,1} = 0.5532 \) (neuron \( O_1 \))
-    - \( a_{3,2} = 0.6321 \) (neuron \( O_2 \))
+    - $\( a_{3,1} = 0.5532 \) (neuron \( O_1 \))$
+    - $\( a_{3,2} = 0.6321 \) (neuron \( O_2 \))$
 
 - **Target outputs**:
-    - \( y_1 = 0.8 \) for output \( O_1 \)
-    - \( y_2 = 0.4 \) for output \( O_2 \)
+    - $\( y_1 = 0.8 \) for output \( O_1 \)$
+    - $\( y_2 = 0.4 \) for output \( O_2 \)$
 
 - **Loss function** (MSE):
 
+```math
 \[
 L = \frac{1}{2} \left( (0.5532 - 0.8)^2 + (0.6321 - 0.4)^2 \right) = \frac{1}{2} \times 0.061 = 0.0305
 \]
+```
 
 ## Step 2: Backpropagation
 
