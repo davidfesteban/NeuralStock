@@ -1,5 +1,5 @@
 package dev.misei.einfachstonks.utils;
-
+ /*
 import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
 import dev.misei.einfachstonks.neuralservice.dataset.DataSetList;
 import dev.misei.einfachstonks.stonkservice.dto.ETFDetailDTO;
@@ -61,4 +61,4 @@ public class StonksMapper {
 
         return null;
     }
-}
+}*/

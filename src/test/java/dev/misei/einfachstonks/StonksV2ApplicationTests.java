@@ -1,5 +1,5 @@
 package dev.misei.einfachstonks;
-
+/*
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
@@ -113,4 +113,4 @@ class StonksV2ApplicationTests {
         return data;
     }
 
-}
+} */

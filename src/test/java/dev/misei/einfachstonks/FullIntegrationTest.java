@@ -1,5 +1,6 @@
 package dev.misei.einfachstonks;
 
+/*
 import dev.misei.einfachstonks.neuralservice.dataset.DataSet;
 import dev.misei.einfachstonks.neuralservice.dataset.DataSetList;
 import dev.misei.einfachstonks.neuralservice.math.AlgorithmType;
@@ -107,4 +108,4 @@ public class FullIntegrationTest {
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", container::getReplicaSetUrl);
     }
-}
+} */

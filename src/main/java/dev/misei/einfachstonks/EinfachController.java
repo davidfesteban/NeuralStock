@@ -1,6 +1,6 @@
 package dev.misei.einfachstonks;
 
-import dev.misei.einfachstonks.neuralservice.network.NeuralNetworkService;
+//import dev.misei.einfachstonks.neuralservice.network.NeuralNetworkService;
 import dev.misei.einfachstonks.stonkservice.StonkService;
 import dev.misei.einfachstonks.stonkservice.model.ETFBridgeType;
 import dev.misei.einfachstonks.stonkservice.model.ETFType;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class EinfachController {
 
 
-    private NeuralNetworkService neuralNetworkService;
+    //private NeuralNetworkService neuralNetworkService;
     private StonkService stonkService;
 
     @GetMapping
