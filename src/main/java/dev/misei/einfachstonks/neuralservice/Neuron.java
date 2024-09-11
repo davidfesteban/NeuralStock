@@ -2,9 +2,11 @@ package dev.misei.einfachstonks.neuralservice;
 
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
 import lombok.Getter;
+import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 @Getter
 public class Neuron {
@@ -14,16 +16,12 @@ public class Neuron {
 
     final Algorithm algorithm;
 
-    //Only for OutputNeurons
-    Double expectedOutputFeed;
-
     Double activation;
     Double bias;
 
     public Neuron(Algorithm algorithm) {
         this.inboundConnections = new ArrayList<>();
         this.outboundConnections = new ArrayList<>();
-        this.expectedOutputFeed = null;
         this.activation = null;
         this.bias = Algorithm.RANDOM.nextDouble(-2, 2);
         this.algorithm = algorithm;
@@ -57,23 +55,20 @@ public class Neuron {
     }
 
     private Double computeErrorLoss() {
-        //If true, it is implicit that it is an Output Neuron
-        if (expectedOutputFeed != null) {
-            return this.activation - expectedOutputFeed;
-        }
-
-        //If false, then is a hidden layer
         return this.outboundConnections.stream()
-                .map(outbound -> outbound.weight * outbound.gradientNeuron)
+                .map(Connection::getOutboundGradientNeuronWeighted)
                 .reduce(Double::sum).orElseThrow(() -> new RuntimeException("Cannot calculate total gradient of children loss"));
     }
 
     public void feedExpectedOutput(Double expected) {
-        this.expectedOutputFeed = expected;
+        //Must be only one
+        Assert.isTrue(outboundConnections.size() == 1, "Wrong layer to feed!");
+        this.outboundConnections.forEach(connection -> connection.manualIOFeed = expected);
     }
 
-    public void feedFeatureInput(Double inputValue) {
-        this.activation = inputValue;
-        outboundConnections.forEach(outbound -> outbound.parentActivation = activation);
+    public void feedFeatureInput(Double expected) {
+        //Must be only one
+        Assert.isTrue(inboundConnections.size() == 1, "Wrong layer to feed!");
+        this.inboundConnections.forEach(connection -> connection.manualIOFeed = expected);
     }
 }

@@ -20,16 +20,26 @@ class NetworkTest {
         uniqueRandom.getAverageError();
     }
 
+    @Test
+    void happyPath2() {
+
+        Network network = Network.create(new Algorithm(3, 1, 0.01, AlgorithmType.LEAKY_RELU, Shape.PERCEPTRON));
+        network.compute(randomNumberSumTestData(100, 3), 10000, true);
+
+        var uniqueRandom = allMatchEqually(1, 3);
+        network.compute(uniqueRandom, 1, false);
+
+        uniqueRandom.getAverageError();
+    }
+
     private Dataset randomNumberSumTestData(int size, int feature) {
 
         List<Datapair> datapairs = new ArrayList<>();
 
-        // Loop to create 10 datapairs
         for (int i = 0; i < size; i++) {
-            // Generate 10 random inputs
             List<Double> inputs = new ArrayList<>();
             for (int j = 0; j < feature; j++) {
-                inputs.add(Math.round((Math.random()/10.0) * 100000)/100000.0);
+                inputs.add(Math.random()*10);
             }
 
             // Calculate the sum of inputs as the output

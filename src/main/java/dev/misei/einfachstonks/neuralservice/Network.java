@@ -5,16 +5,23 @@ import dev.misei.einfachstonks.neuralservice.dataenum.Datapair;
 import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
 import org.springframework.util.Assert;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
 public class Network {
 
-    Algorithm algorithm;
+    final Algorithm algorithm;
+
+    final List<Connection> inboundFeeder;
+    final List<Connection> outboundFeeder;
+
     List<List<Neuron>> network;
 
     private Network(Algorithm algorithm) {
         this.algorithm = algorithm;
+        inboundFeeder = new ArrayList<>();
+        outboundFeeder = new ArrayList<>();
     }
 
     public static Network create(Algorithm algorithm) {
@@ -58,30 +65,34 @@ public class Network {
     }
 
     private void computeForward(List<Double> inputs) {
-        for (int i = 0; i < network.getFirst().size(); i++) {
-            network.getFirst().get(i).feedFeatureInput(inputs.get(i));
+        for (int i = 0; i < inboundFeeder.size(); i++) {
+            inboundFeeder.get(i).parentActivation = inputs.get(i);
         }
 
-        for (int i = 1; i < network.size(); i++) {
-            network.get(i).forEach(Neuron::computeForward);
-        }
+        network.forEach(neurons -> neurons.forEach(Neuron::computeForward));
     }
 
     private void computeBackward(List<Double> outputs) {
-        for (int i = 0; i < network.getLast().size(); i++) {
-            network.getLast().get(i).feedExpectedOutput(outputs.get(i));
+        for (int i = 0; i < outboundFeeder.size(); i++) {
+            outboundFeeder.get(i).manualIOFeed = outputs.get(i);
         }
 
-        for (int i = network.size() - 1; i > 0; i--) {
+        for (int i = network.size() - 1; i >= 0; i--) {
             network.get(i).forEach(Neuron::prepareGradient);
         }
 
-        for (int i = network.size() - 1; i > 0; i--) {
+        for (int i = network.size() - 1; i >= 0; i--) {
             network.get(i).forEach(Neuron::updateWeights);
         }
     }
 
     private void connectAll(Algorithm algorithm) {
+        network.getFirst().forEach(neuron -> {
+            Connection connection = new Connection(algorithm);
+            neuron.inboundConnections.add(connection);
+            inboundFeeder.add(connection);
+        });
+
         for (int layerIndex = 0; layerIndex < network.size() - 1; layerIndex++) {
             List<Neuron> currentLayer = network.get(layerIndex);
             List<Neuron> nextLayer = network.get(layerIndex + 1);
@@ -94,5 +105,11 @@ public class Network {
                 }
             }
         }
+
+        network.getLast().forEach(neuron -> {
+            Connection connection = new Connection(algorithm);
+            neuron.outboundConnections.add(connection);
+            outboundFeeder.add(connection);
+        });
     }
 }
