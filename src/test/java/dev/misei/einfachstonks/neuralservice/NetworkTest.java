@@ -1,9 +1,6 @@
 package dev.misei.einfachstonks.neuralservice;
 
-import dev.misei.einfachstonks.neuralservice.dataenum.AlgorithmType;
-import dev.misei.einfachstonks.neuralservice.dataenum.Datapair;
-import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
-import dev.misei.einfachstonks.neuralservice.dataenum.Shape;
+import dev.misei.einfachstonks.neuralservice.dataenum.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -14,14 +11,13 @@ class NetworkTest {
     @Test
     void happyPath() {
 
-        Network network = Network.create(2, 1, Shape.PERCEPTRON, 0.01, AlgorithmType.RELU);
-        network.compute(allMatchEqually(100, 2), 10000, true);
+        Network network = Network.create(new Algorithm(3, 1, 0.01, AlgorithmType.LEAKY_RELU, Shape.PERCEPTRON));
+        network.compute(allMatchEqually(100, 3), 10000, true);
 
         var uniqueRandom = allMatchEqually(1, 3);
         network.compute(uniqueRandom, 1, false);
 
         uniqueRandom.getAverageError();
-
     }
 
     private Dataset randomNumberSumTestData(int size, int feature) {

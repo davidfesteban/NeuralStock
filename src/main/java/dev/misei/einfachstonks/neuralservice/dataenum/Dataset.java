@@ -13,8 +13,6 @@ public class Dataset {
     private final int outputSize;
     private final int inputSize;
 
-    private List<List<BigDecimal>> predicted = new ArrayList<>();
-
     public Dataset(Datapair initial) {
         this.outputSize = initial.getOutputs().size();
         this.inputSize = initial.getInputs().size();

@@ -73,6 +73,7 @@ public enum Shape {
         }
     },
     COMPRESSOR {
+        @Override
         public List<Integer> draw(int input, int output) {
             List<Integer> shape = new ArrayList<>();
             shape.add(input);

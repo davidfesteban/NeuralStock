@@ -20,17 +20,17 @@ public class Datapair {
     }
 
     public Double computeTotalMSE() {
-        Double temporalLoss = 0d;
+        Double totalLoss = 0d;
 
         for (int i = 0; i < predicted.size(); i++) {
             var output = predicted.get(i);
             var expected = outputs.get(i);
 
-            var derivativeLoss = output - expected;
-
-            temporalLoss = temporalLoss + Math.pow(derivativeLoss,2);
+            var error = output - expected;
+            totalLoss += Math.pow(error, 2);
         }
 
-        return temporalLoss / predicted.size();
+        // Return the mean of the squared errors
+        return totalLoss / predicted.size();
     }
 }

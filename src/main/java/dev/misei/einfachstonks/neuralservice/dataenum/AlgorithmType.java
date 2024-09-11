@@ -1,7 +1,5 @@
 package dev.misei.einfachstonks.neuralservice.dataenum;
 
-import java.util.Random;
-
 public enum AlgorithmType {
     SIGMOID {
         @Override
@@ -15,9 +13,9 @@ public enum AlgorithmType {
         }
 
         @Override
-        public Double weightInitialiser() {
+        Double weightInitialiser(int inputs, int outputs) {
             double stdDev = Math.sqrt(2.0 / (inputs + outputs));
-            return random.nextGaussian() * stdDev;
+            return Algorithm.RANDOM.nextGaussian() * stdDev;
         }
     },
     RELU {
@@ -32,9 +30,9 @@ public enum AlgorithmType {
         }
 
         @Override
-        public Double weightInitialiser() {
+        Double weightInitialiser(int inputs, int outputs) {
             double stdDev = Math.sqrt(2.0 / inputs);
-            return random.nextGaussian() * stdDev;
+            return Algorithm.RANDOM.nextGaussian() * stdDev;
         }
     },
     LEAKY_RELU {
@@ -52,24 +50,15 @@ public enum AlgorithmType {
         }
 
         @Override
-        public Double weightInitialiser() {
+        Double weightInitialiser(int inputs, int outputs) {
             double stdDev = Math.sqrt(2.0 / inputs);
-            return random.nextGaussian() * stdDev;
+            return Algorithm.RANDOM.nextGaussian() * stdDev;
         }
     };
-
-    public static final Random random = new Random();
-    protected double inputs;
-    protected double outputs;
 
     public abstract Double activate(Double x);
 
     public abstract Double derivative(Double x);
 
-    public void setInputsAndOutputs(double inputs, double outputs) {
-        this.inputs = inputs;
-        this.outputs = outputs;
-    }
-
-    public abstract Double weightInitialiser();
+    abstract Double weightInitialiser(int inputs, int outputs);
 }

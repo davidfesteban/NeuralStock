@@ -1,42 +1,43 @@
 package dev.misei.einfachstonks.neuralservice;
 
-import dev.misei.einfachstonks.neuralservice.dataenum.AlgorithmType;
+import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
 import dev.misei.einfachstonks.neuralservice.dataenum.Datapair;
 import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
-import dev.misei.einfachstonks.neuralservice.dataenum.Shape;
+import org.springframework.util.Assert;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.IntStream;
 
 public class Network {
 
+    Algorithm algorithm;
     List<List<Neuron>> network;
 
-    private Network() {
+    private Network(Algorithm algorithm) {
+        this.algorithm = algorithm;
     }
 
-    public static Network create(int inputSize, int outputSize, Shape shape, double learningRatio, AlgorithmType algorithmType) {
-        Network result = new Network();
+    public static Network create(Algorithm algorithm) {
+        Network result = new Network(algorithm);
 
-        algorithmType.setInputsAndOutputs(inputSize, outputSize);
-
-        result.network = shape.draw(inputSize, outputSize).stream().map(
-                integer -> IntStream.range(0, integer).mapToObj(i -> new Neuron(algorithmType, learningRatio))
+        result.network = algorithm.drawShape().stream().map(
+                integer -> IntStream.range(0, integer).mapToObj(i -> new Neuron(algorithm))
                         .toList()).toList();
 
-        result.connectAll(algorithmType);
+        result.connectAll(algorithm);
 
         return result;
     }
 
     public void compute(Dataset dataset, int epochs, boolean train) {
-
         for (int i = 0; i < epochs; i++) {
             for (int j = 0; j < dataset.getDataset().size(); j++) {
                 Datapair datapair = dataset.getDataset().get(j);
                 List<Double> inputs = datapair.getInputs();
                 List<Double> outputs = datapair.getOutputs();
+
+                Assert.isTrue(inputs.size() == algorithm.getInputSize(), "Input size does not match expected size");
+                Assert.isTrue(outputs.size() == algorithm.getOutputSize(), "Output size does not match expected size");
 
                 computeForward(inputs);
 
@@ -80,14 +81,14 @@ public class Network {
         }
     }
 
-    private void connectAll(AlgorithmType algorithmType) {
+    private void connectAll(Algorithm algorithm) {
         for (int layerIndex = 0; layerIndex < network.size() - 1; layerIndex++) {
             List<Neuron> currentLayer = network.get(layerIndex);
             List<Neuron> nextLayer = network.get(layerIndex + 1);
 
             for (Neuron currentNeuron : currentLayer) {
                 for (Neuron nextNeuron : nextLayer) {
-                    Connection connection = new Connection(algorithmType);
+                    Connection connection = new Connection(algorithm);
                     currentNeuron.outboundConnections.add(connection);
                     nextNeuron.inboundConnections.add(connection);
                 }
