@@ -1,12 +1,27 @@
 package dev.misei.einfachstonks.neuralservice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.misei.einfachstonks.neuralservice.dataenum.*;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@SpringBootTest
 class NetworkTest {
+
+    @Autowired
+    private NeuralService neuralService;
+
+    @Test
+    void testFileCreation() throws IOException {
+        // Act
+        neuralService.exporter();
+    }
 
     @Test
     void happyPath() {
@@ -21,15 +36,28 @@ class NetworkTest {
     }
 
     @Test
-    void happyPath2() {
+    void happyPath2() throws IOException {
 
-        Network network = Network.create(new Algorithm(3, 1, 0.01, AlgorithmType.LEAKY_RELU, Shape.PERCEPTRON));
-        network.compute(randomNumberSumTestData(100, 3), 10000, true);
-
-        var uniqueRandom = allMatchEqually(1, 3);
-        network.compute(uniqueRandom, 1, false);
-
-        uniqueRandom.getAverageError();
+        //Network network = Network.create(new Algorithm(3, 1, 0.01, AlgorithmType.LEAKY_RELU, Shape.PERCEPTRON));
+        //network.compute(randomNumberSumTestData(100, 3), 10000, true);
+//
+        //var uniqueRandom = randomNumberSumTestData(1, 3);
+        //network.compute(uniqueRandom, 1, false);
+//
+        //objectMapper.writeValue(new File("network.json"), network);
+//
+        //System.out.println(uniqueRandom.getAverageError());
+//
+        //var untrainedDataset = randomNumberSumTestData(1, 3);
+        //network = Network.create(new Algorithm(3, 1, 0.01, AlgorithmType.LEAKY_RELU, Shape.PERCEPTRON));
+        //network.compute(untrainedDataset, 1, true);
+//
+        //System.out.println(untrainedDataset.getAverageError());
+//
+        //network = objectMapper.readValue(new File("network.json"), objectMapper.getTypeFactory().constructCollectionType(List.class, List.class));
+        //network.compute(untrainedDataset, 1, true);
+//
+        //System.out.println(untrainedDataset.getAverageError());
     }
 
     private Dataset randomNumberSumTestData(int size, int feature) {

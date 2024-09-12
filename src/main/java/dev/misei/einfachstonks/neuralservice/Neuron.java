@@ -2,11 +2,9 @@ package dev.misei.einfachstonks.neuralservice;
 
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
 import lombok.Getter;
-import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 @Getter
 public class Neuron {
@@ -58,17 +56,5 @@ public class Neuron {
         return this.outboundConnections.stream()
                 .map(Connection::getOutboundGradientNeuronWeighted)
                 .reduce(Double::sum).orElseThrow(() -> new RuntimeException("Cannot calculate total gradient of children loss"));
-    }
-
-    public void feedExpectedOutput(Double expected) {
-        //Must be only one
-        Assert.isTrue(outboundConnections.size() == 1, "Wrong layer to feed!");
-        this.outboundConnections.forEach(connection -> connection.manualIOFeed = expected);
-    }
-
-    public void feedFeatureInput(Double expected) {
-        //Must be only one
-        Assert.isTrue(inboundConnections.size() == 1, "Wrong layer to feed!");
-        this.inboundConnections.forEach(connection -> connection.manualIOFeed = expected);
     }
 }

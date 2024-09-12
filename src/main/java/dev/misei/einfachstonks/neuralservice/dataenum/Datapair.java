@@ -2,28 +2,29 @@ package dev.misei.einfachstonks.neuralservice.dataenum;
 
 import lombok.Getter;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Getter
 public class Datapair {
+
+    private final UUID uuid = UUID.randomUUID();
     private List<Double> inputs;
     private List<Double> outputs;
 
-    private List<Double> predicted;
+    private List<List<Double>> predictedHistory;
 
     public Datapair(List<Double> inputs, List<Double> outputs) {
         this.inputs = inputs;
         this.outputs = outputs;
-        this.predicted = new ArrayList<>();
+        this.predictedHistory = new ArrayList<>();
     }
 
-    public Double computeTotalMSE() {
+    public Double computeLastMSE() {
+        var lastPredicted = predictedHistory.getLast();
         Double totalLoss = 0d;
 
-        for (int i = 0; i < predicted.size(); i++) {
-            var output = predicted.get(i);
+        for (int i = 0; i < lastPredicted.size(); i++) {
+            var output = lastPredicted.get(i);
             var expected = outputs.get(i);
 
             var error = output - expected;
@@ -31,6 +32,6 @@ public class Datapair {
         }
 
         // Return the mean of the squared errors
-        return totalLoss / predicted.size();
+        return totalLoss / lastPredicted.size();
     }
 }

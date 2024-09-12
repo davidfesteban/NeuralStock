@@ -3,29 +3,33 @@ package dev.misei.einfachstonks.neuralservice;
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
 import dev.misei.einfachstonks.neuralservice.dataenum.Datapair;
 import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
+import lombok.Data;
 import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
+@Data
 public class Network {
 
-    final Algorithm algorithm;
-
-    final List<Connection> inboundFeeder;
-    final List<Connection> outboundFeeder;
-
+    private final Algorithm algorithm;
+    private final List<Connection> inboundFeeder;
+    private final List<Connection> outboundFeeder;
+    private final Dataset dataset;
     List<List<Neuron>> network;
+    private int accumulatedTrainedEpochs;
 
-    private Network(Algorithm algorithm) {
+    private Network(Algorithm algorithm, Dataset dataset) {
         this.algorithm = algorithm;
-        inboundFeeder = new ArrayList<>();
-        outboundFeeder = new ArrayList<>();
+        this.inboundFeeder = new ArrayList<>();
+        this.outboundFeeder = new ArrayList<>();
+        this.dataset = dataset;
+        this.accumulatedTrainedEpochs = 0;
     }
 
-    public static Network create(Algorithm algorithm) {
-        Network result = new Network(algorithm);
+    public static Network create(Algorithm algorithm, Dataset dataset) {
+        Network result = new Network(algorithm, dataset);
 
         result.network = algorithm.drawShape().stream().map(
                 integer -> IntStream.range(0, integer).mapToObj(i -> new Neuron(algorithm))
@@ -36,54 +40,76 @@ public class Network {
         return result;
     }
 
-    public void compute(Dataset dataset, int epochs, boolean train) {
-        for (int i = 0; i < epochs; i++) {
-            for (int j = 0; j < dataset.getDataset().size(); j++) {
-                Datapair datapair = dataset.getDataset().get(j);
-                List<Double> inputs = datapair.getInputs();
-                List<Double> outputs = datapair.getOutputs();
+    public void predict(Dataset innerDataset) {
+        compute(innerDataset, 0, false);
+    }
 
-                Assert.isTrue(inputs.size() == algorithm.getInputSize(), "Input size does not match expected size");
-                Assert.isTrue(outputs.size() == algorithm.getOutputSize(), "Output size does not match expected size");
+    public void train(int epochs) {
+        train(epochs, dataset.getDataset().size());
+    }
 
-                computeForward(inputs);
+    public void train(int epochs, int pastWindowTime) {
+        IntStream.range(0, epochs).forEach(value ->
+                compute(dataset, Math.max(0, dataset.getDataset().size() - pastWindowTime), true));
+    }
 
-                //Output Predicted Values
-                datapair.getPredicted().clear();
-                datapair.getPredicted().addAll(network.getLast().stream().map(Neuron::getActivation).toList());
+    /**
+     * When merging a new dataset, you need to train equally the network and normalise it
+     */
+    public void merge(Dataset innerDataset, int pastWindowTime, int epochRelationPercent) {
+        if (!innerDataset.isCompatible(this.dataset)) {
+            throw new IllegalArgumentException("Datasets are not compatible on merge");
+        }
 
-                System.out.println(datapair.getOutputs());
-                System.out.println(datapair.getPredicted());
-                System.out.println(datapair.computeTotalMSE());
+        //Prepare
+        var currentDataset = this.dataset.getDataset();
 
-                if (train) {
-                    computeBackward(outputs);
-                }
+        //Merge
+        var pastDatapairs = new ArrayList<>(currentDataset
+                .subList(Math.max(0, currentDataset.size() - pastWindowTime), currentDataset.size()));
+        innerDataset.getDataset().addAll(0, pastDatapairs);
+
+        //Train
+        IntStream.range(0, Math.max(1, (int) Math.ceil(accumulatedTrainedEpochs * epochRelationPercent / 100.0)))
+                .forEach(value -> compute(innerDataset, 0, true));
+
+        //Clean
+        innerDataset.getDataset().removeAll(pastDatapairs);
+
+        //Add
+        currentDataset.addAll(innerDataset.getDataset());
+    }
+
+    private void compute(Dataset innerDataset, int indexStart, boolean train) {
+        for (int j = indexStart; j < innerDataset.getDataset().size(); j++) {
+            Datapair datapair = innerDataset.getDataset().get(j);
+            List<Double> inputs = datapair.getInputs();
+            List<Double> outputs = datapair.getOutputs();
+
+            Assert.isTrue(inputs.size() == algorithm.getInputSize(), "Input size does not match expected size");
+            Assert.isTrue(outputs.size() == algorithm.getOutputSize(), "Output size does not match expected size");
+
+            computeForward(inputs);
+
+            //Output Predicted Values
+            datapair.getPredictedHistory().add(outboundFeeder.stream().map(connection -> connection.parentActivation).toList());
+
+            if (train) {
+                computeBackward(outputs);
+                ++accumulatedTrainedEpochs;
             }
-            System.out.println("Epoch: " + i);
         }
     }
 
     private void computeForward(List<Double> inputs) {
-        for (int i = 0; i < inboundFeeder.size(); i++) {
-            inboundFeeder.get(i).parentActivation = inputs.get(i);
-        }
-
-        network.forEach(neurons -> neurons.forEach(Neuron::computeForward));
+        IntStream.range(0, inboundFeeder.size()).forEach(i -> inboundFeeder.get(i).parentActivation = inputs.get(i));
+        network.forEach(layer -> layer.forEach(Neuron::computeForward));
     }
 
     private void computeBackward(List<Double> outputs) {
-        for (int i = 0; i < outboundFeeder.size(); i++) {
-            outboundFeeder.get(i).manualIOFeed = outputs.get(i);
-        }
-
-        for (int i = network.size() - 1; i >= 0; i--) {
-            network.get(i).forEach(Neuron::prepareGradient);
-        }
-
-        for (int i = network.size() - 1; i >= 0; i--) {
-            network.get(i).forEach(Neuron::updateWeights);
-        }
+        IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
+        network.reversed().forEach(neurons -> neurons.forEach(Neuron::computeForward));
+        network.reversed().forEach(neurons -> neurons.forEach(Neuron::updateWeights));
     }
 
     private void connectAll(Algorithm algorithm) {
