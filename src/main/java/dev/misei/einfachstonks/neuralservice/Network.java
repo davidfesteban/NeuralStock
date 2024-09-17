@@ -96,8 +96,11 @@ public class Network {
 
             if (train) {
                 computeBackward(outputs);
-                ++accumulatedTrainedEpochs;
             }
+        }
+
+        if (train) {
+            ++accumulatedTrainedEpochs;
         }
     }
 
@@ -108,8 +111,20 @@ public class Network {
 
     private void computeBackward(List<Double> outputs) {
         IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
-        network.reversed().forEach(neurons -> neurons.forEach(Neuron::computeForward));
-        network.reversed().forEach(neurons -> neurons.forEach(Neuron::updateWeights));
+
+        for (int i = network.size() - 1; i >= 0 ; --i) {
+            network.get(i).forEach(Neuron::prepareGradient);
+        }
+
+        for (int i = network.size() - 1; i >= 0 ; --i) {
+            network.get(i).forEach(Neuron::updateWeights);
+        }
+
+        //for (int i = network.size() - 1; i >= 0 ; --i) {
+//
+        //}
+        //network.reversed().forEach(neurons -> neurons.forEach(Neuron::prepareGradient));
+        //network.reversed().forEach(neurons -> neurons.forEach(Neuron::updateWeights));
     }
 
     private void connectAll(Algorithm algorithm) {

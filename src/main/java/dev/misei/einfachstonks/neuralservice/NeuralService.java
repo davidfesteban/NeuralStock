@@ -1,8 +1,8 @@
 package dev.misei.einfachstonks.neuralservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
 import lombok.AllArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -10,50 +10,73 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
 @Service
 @AllArgsConstructor
 public class NeuralService {
 
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     private final Map<UUID, Network> networkList = new HashMap<>();
-    private final Map<UUID, CompletableFuture<Void>> futureMap = new HashMap<>();
+    private final ConcurrentMap<UUID, Future<Void>> futureMap = new ConcurrentHashMap<>();
 
     private ObjectMapper objectMapper;
 
-    public void save(UUID networkId) throws IOException {
-        objectMapper.writeValue(new File("networks.json"), networkList);
+    public void saveNetwork(UUID networkId) throws IOException {
+        objectMapper.writeValue(new File(String.format("networks/network_%s.json", networkId.toString())), networkList.get(networkId));
     }
 
-    // Asynchronously compute the network and store the CompletableFuture in a map
-    @Async
-    public CompletableFuture<Void> computeNetworkAsync(UUID networkId) {
-        Network network = networkList.get(networkId);
-        if (network != null) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                //network.compute();
-            });
+    public void importNetwork(UUID networkId) throws IOException {
+        networkList.put(networkId, objectMapper.readValue(new File(String.format("networks/network_%s.json", networkId.toString())), Network.class));
+    }
 
-            // Store the future in the map to track it
-            futureMap.put(networkId, future);
+    public UUID create(Network network) {
+        var key = UUID.randomUUID();
+        networkList.put(key, network);
+        return key;
+    }
 
-            return future;
+    public boolean isBusy(UUID networkId) {
+        return futureMap.containsKey(networkId) && futureMap.get(networkId).state().equals(Future.State.RUNNING);
+    }
+
+    public void predictAsync(UUID networkId, Dataset innerDataset) {
+        computeAsync(networkId, () -> {
+            synchronized (innerDataset) {
+                networkList.get(networkId).predict(innerDataset);
+            }
+            return null;
+        });
+    }
+
+    public void trainAsync(UUID networkId, int epochs) {
+        computeAsync(networkId, () -> {
+            networkList.get(networkId).train(epochs);
+            return null;
+        });
+    }
+
+    public void trainAsync(UUID networkId, int epochs, int pastWindowTime) {
+        computeAsync(networkId, () -> {
+            networkList.get(networkId).train(epochs, pastWindowTime);
+            return null;
+        });
+    }
+
+    public void mergeAsync(UUID networkId, Dataset innerDataset, int pastWindowTime, int epochRelationPercent) {
+        computeAsync(networkId, () -> {
+            synchronized (innerDataset) {
+                networkList.get(networkId).merge(innerDataset, pastWindowTime, epochRelationPercent);
+            }
+            return null;
+        });
+    }
+
+    private void computeAsync(UUID networkId, Callable<Void> callable) {
+        if (isBusy(networkId)) {
+            throw new RuntimeException("Network busy");
         } else {
-            throw new IllegalArgumentException("Network not found for ID: " + networkId);
-        }
-    }
-
-    // Check if the computation is still running
-    public boolean isComputationRunning(UUID networkId) {
-        CompletableFuture<Void> future = futureMap.get(networkId);
-        return future != null && !future.isDone();
-    }
-
-
-    public void cancelComputation(UUID networkId) {
-        CompletableFuture<Void> future = futureMap.get(networkId);
-        if (future != null && !future.isDone()) {
-            future.cancel(true); // Cancel the running task
+            futureMap.put(networkId, executorService.submit(callable));
         }
     }
 }
