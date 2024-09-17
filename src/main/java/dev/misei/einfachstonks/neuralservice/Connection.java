@@ -1,7 +1,11 @@
 package dev.misei.einfachstonks.neuralservice;
 
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
+@Data
+@AllArgsConstructor
 public class Connection {
 
     Double parentActivation;

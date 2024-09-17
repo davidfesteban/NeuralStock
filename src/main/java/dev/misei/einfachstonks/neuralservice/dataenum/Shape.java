@@ -26,6 +26,27 @@ public enum Shape {
         }
 
     },
+    MAGIC {
+        @Override
+        public List<Integer> draw(int input, int output) {
+            List<Integer> shape = new ArrayList<>();
+            shape.add(input);
+
+            int hiddenLayers = 3;
+
+            int neuronsPerLayer = 4;
+
+            for (int i = 0; i < hiddenLayers; i++) {
+                shape.add(neuronsPerLayer);
+            }
+
+            shape.add(output);
+
+            display(shape);
+
+            return shape;
+        }
+    },
     SQUARE {
         @Override
         public List<Integer> draw(int input, int output) {
@@ -132,7 +153,7 @@ public enum Shape {
         }
     };
 
-    private static void display(List<Integer> shape) {
+    protected static void display(List<Integer> shape) {
         for (int neurons : shape) {
             System.out.println("*".repeat(neurons));
         }

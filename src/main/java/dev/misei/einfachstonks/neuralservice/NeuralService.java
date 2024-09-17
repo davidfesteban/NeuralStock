@@ -23,21 +23,31 @@ public class NeuralService {
     private ObjectMapper objectMapper;
 
     public void saveNetwork(UUID networkId) throws IOException {
-        objectMapper.writeValue(new File(String.format("networks/network_%s.json", networkId.toString())), networkList.get(networkId));
+        objectMapper.writeValue(new File(String.format("network_%s.json", networkId.toString())), networkList.get(networkId));
     }
 
     public void importNetwork(UUID networkId) throws IOException {
-        networkList.put(networkId, objectMapper.readValue(new File(String.format("networks/network_%s.json", networkId.toString())), Network.class));
+        var network = objectMapper.readValue(new File(String.format("network_%s.json", networkId.toString())), Network.class);
+        network.reconnectAll();
+        networkList.put(networkId, network);
     }
 
     public UUID create(Network network) {
-        var key = UUID.randomUUID();
-        networkList.put(key, network);
-        return key;
+        return create(UUID.randomUUID(), network);
+    }
+
+    public UUID create(UUID uuid, Network network) {
+        networkList.put(uuid, network);
+        return uuid;
     }
 
     public boolean isBusy(UUID networkId) {
-        return futureMap.containsKey(networkId) && futureMap.get(networkId).state().equals(Future.State.RUNNING);
+        if(futureMap.containsKey(networkId) && futureMap.get(networkId).state().equals(Future.State.RUNNING)) {
+            System.out.println(networkList.get(networkId).getAccumulatedSyncTrainedEpochs());
+            return true;
+        }
+
+        return false;
     }
 
     public void predictAsync(UUID networkId, Dataset innerDataset) {

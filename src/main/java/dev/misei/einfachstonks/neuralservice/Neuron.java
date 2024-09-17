@@ -1,12 +1,14 @@
 package dev.misei.einfachstonks.neuralservice;
 
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
+@Data
+@AllArgsConstructor
 public class Neuron {
 
     final List<Connection> inboundConnections;

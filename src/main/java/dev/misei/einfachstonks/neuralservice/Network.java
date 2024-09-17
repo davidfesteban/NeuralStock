@@ -3,11 +3,13 @@ package dev.misei.einfachstonks.neuralservice;
 import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
 import dev.misei.einfachstonks.neuralservice.dataenum.Datapair;
 import dev.misei.einfachstonks.neuralservice.dataenum.Dataset;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 @Data
@@ -112,19 +114,8 @@ public class Network {
     private void computeBackward(List<Double> outputs) {
         IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
 
-        for (int i = network.size() - 1; i >= 0 ; --i) {
-            network.get(i).forEach(Neuron::prepareGradient);
-        }
-
-        for (int i = network.size() - 1; i >= 0 ; --i) {
-            network.get(i).forEach(Neuron::updateWeights);
-        }
-
-        //for (int i = network.size() - 1; i >= 0 ; --i) {
-//
-        //}
-        //network.reversed().forEach(neurons -> neurons.forEach(Neuron::prepareGradient));
-        //network.reversed().forEach(neurons -> neurons.forEach(Neuron::updateWeights));
+        network.reversed().forEach(neurons -> neurons.forEach(Neuron::prepareGradient));
+        network.reversed().forEach(neurons -> neurons.forEach(Neuron::updateWeights));
     }
 
     private void connectAll(Algorithm algorithm) {
@@ -152,5 +143,32 @@ public class Network {
             neuron.outboundConnections.add(connection);
             outboundFeeder.add(connection);
         });
+    }
+
+    void reconnectAll() {
+        network.forEach(neurons -> neurons.forEach(neuron -> neuron.inboundConnections.clear()));
+
+        for (int i = 0; i < network.getFirst().size(); i++) {
+            network.getFirst().get(i).inboundConnections.add(inboundFeeder.get(i));
+        }
+
+        for (int layerIndex = 0; layerIndex < network.size() - 1; layerIndex++) {
+            List<Neuron> currentLayer = network.get(layerIndex);
+            List<Neuron> nextLayer = network.get(layerIndex + 1);
+
+            for (Neuron neuron : currentLayer) {
+                for (int j = 0; j < nextLayer.size(); j++) {
+                    nextLayer.get(j).inboundConnections.add(neuron.getOutboundConnections().get(j));
+                }
+            }
+        }
+
+        for (int i = 0; i < network.getLast().size(); i++) {
+            network.getLast().get(i).outboundConnections.add(outboundFeeder.get(i));
+        }
+    }
+
+    public synchronized int getAccumulatedSyncTrainedEpochs() {
+        return accumulatedTrainedEpochs;
     }
 }
