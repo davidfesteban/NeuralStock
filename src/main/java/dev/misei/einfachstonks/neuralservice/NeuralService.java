@@ -12,7 +12,6 @@ import reactor.core.publisher.Flux;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,41 +45,54 @@ public class NeuralService {
         return uuid;
     }
 
-    public CountDownLatch predictAsync(UUID networkId, Dataset innerDataset) {
+    public EpochCountDown predictAsync(UUID networkId, Dataset innerDataset) {
+        EpochCountDown latch = new EpochCountDown(1);
         Network network = networkList.get(networkId);
-        var flux = network.predict(innerDataset)
+        var flux = network.predict(innerDataset, latch)
                 .buffer(1);
 
-        return subscribe(networkId, network, flux);
+        subscribe(networkId, network, flux, latch);
+
+        return latch;
     }
 
-    public CountDownLatch trainElasticAsync(UUID networkId, int epochs) {
+    public EpochCountDown trainElasticAsync(UUID networkId, int epochs) {
+        EpochCountDown latch = new EpochCountDown(epochs);
         Network network = networkList.get(networkId);
-        var flux = network.train(epochs)
+        var flux = network.train(epochs, latch)
                 .buffer(BATCH_SAVE_SIZE);
 
-        return subscribe(networkId, network, flux);
+        subscribe(networkId, network, flux, latch);
+
+        return latch;
     }
 
-    public CountDownLatch trainElasticAsync(UUID networkId, int epochs, int pastWindowTime) {
+    public EpochCountDown trainElasticAsync(UUID networkId, int epochs, int pastWindowTime) {
+        EpochCountDown latch = new EpochCountDown(epochs);
         Network network = networkList.get(networkId);
-        var flux = network.train(epochs, pastWindowTime)
+        var flux = network.train(epochs, pastWindowTime, latch)
                 .buffer(BATCH_SAVE_SIZE);
 
-        return subscribe(networkId, network, flux);
+        subscribe(networkId, network, flux, latch);
+
+        return latch;
     }
 
-    public CountDownLatch mergeAsync(UUID networkId, Dataset innerDataset, int pastWindowTime, int epochRelationPercent) {
+    public EpochCountDown mergeAsync(UUID networkId, Dataset innerDataset, int pastWindowTime, int epochRelationPercent) {
         Network network = networkList.get(networkId);
-        var flux = network.merge(innerDataset, pastWindowTime, epochRelationPercent)
+        int epochs = (int) Math.max(1, Math.ceil(network.getAccumulatedTrainedEpochs() * epochRelationPercent / 100.0));
+        EpochCountDown latch = new EpochCountDown(epochs);
+
+        var flux = network.merge(innerDataset, pastWindowTime, epochs, latch)
                 .buffer(BATCH_SAVE_SIZE);
 
-        return subscribe(networkId, network, flux);
+        subscribe(networkId, network, flux, latch);
+
+        return latch;
     }
 
-    private CountDownLatch subscribe(UUID networkId, Network network, Flux<List<PredictedPoint>> flux) {
+    private void subscribe(UUID networkId, Network network, Flux<List<PredictedPoint>> flux, EpochCountDown epochCountDown) {
         int initialEpoch = network.getAccumulatedTrainedEpochs();
-        CountDownLatch latch = new CountDownLatch(1);
 
         AtomicReference<PredictedData> currentPredictedData = new AtomicReference<>(
                 new PredictedData(UUID.randomUUID(), networkId, new ArrayList<>(), initialEpoch)
@@ -120,18 +132,14 @@ public class NeuralService {
                         }
                     });
                 }, throwable -> {
-                    // Error handling
-                    latch.countDown();
                     System.out.println("Error during training: " + throwable.getMessage());
+                    epochCountDown.terminate();
                 }, () -> {
-                    // On completion, save remaining data in cache
                     var cache = predictedCache.get();
                     cache.add(currentPredictedData.get());
                     predictedDataRepository.saveAllOnCollectionName(cache, networkId.toString());
-                    latch.countDown();
                     System.out.println("Training completed for network: " + networkId);
+                    epochCountDown.terminate();
                 });
-
-        return latch;
     }
 }

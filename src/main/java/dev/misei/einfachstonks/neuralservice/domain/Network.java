@@ -3,6 +3,7 @@ package dev.misei.einfachstonks.neuralservice.domain;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.misei.einfachstonks.neuralservice.EpochCountDown;
 import dev.misei.einfachstonks.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachstonks.neuralservice.domain.data.Dataset;
 import dev.misei.einfachstonks.neuralservice.model.PredictedPoint;
@@ -69,13 +70,14 @@ public class Network extends ArrayList<Layer> {
         return result;
     }
 
-    public Flux<PredictedPoint> predict(Dataset innerDataset) {
+    public Flux<PredictedPoint> predict(Dataset innerDataset, EpochCountDown latch) {
         if (operationInProgress.get()) {
             return Flux.error(() -> new IllegalStateException("On Going Ops"));
         }
         return Flux.<PredictedPoint>create(sink -> {
                     operationInProgress.set(true);
                     compute(deepCopy(innerDataset), 0, false, sink);
+                    latch.countDown();
                     sink.complete();
                 })
                 .subscribeOn(Schedulers.boundedElastic())
@@ -83,11 +85,11 @@ public class Network extends ArrayList<Layer> {
                 .doOnComplete(() -> System.out.println("Prediction completed"));
     }
 
-    public Flux<PredictedPoint> train(int epochs) {
-        return train(epochs, dataset.size());
+    public Flux<PredictedPoint> train(int epochs, EpochCountDown latch) {
+        return train(epochs, dataset.size(), latch);
     }
 
-    public Flux<PredictedPoint> train(int epochs, int pastWindowTime) {
+    public Flux<PredictedPoint> train(int epochs, int pastWindowTime, EpochCountDown latch) {
         if (operationInProgress.get()) {
             return Flux.error(() -> new IllegalStateException("On Going Ops"));
         }
@@ -96,6 +98,7 @@ public class Network extends ArrayList<Layer> {
                     operationInProgress.set(true);
                     IntStream.range(0, epochs).forEach(value -> {
                         compute(dataset, Math.max(0, dataset.size() - pastWindowTime), true, sink);
+                        latch.countDown();
                     });
 
                     sink.complete();
@@ -107,13 +110,13 @@ public class Network extends ArrayList<Layer> {
                 .doOnComplete(() -> System.out.println("Training completed"));
     }
 
-    public Flux<PredictedPoint> merge(Dataset innerDataset, int pastWindowTime, int epochRelationPercent) {
+    public Flux<PredictedPoint> merge(Dataset innerDataset, int pastWindowTime, int epochs, EpochCountDown latch) {
         if (!innerDataset.isCompatible(this.dataset)) {
             throw new IllegalArgumentException("Datasets are not compatible on merge");
         }
 
         this.dataset.addAll(innerDataset);
-        return train((int) Math.max(1, Math.ceil(accumulatedTrainedEpochs * epochRelationPercent / 100.0)), pastWindowTime);
+        return train(epochs, pastWindowTime, latch);
     }
 
     private void compute(Dataset innerDataset, int indexStart, boolean train, FluxSink<PredictedPoint> sinkPoint) {
