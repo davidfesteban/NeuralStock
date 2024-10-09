@@ -115,7 +115,7 @@ public class NeuralService {
 
                         // If the cache size exceeds the batch size, save it
                         if (predictedCache.get().size() > BATCH_SAVE_SIZE) {
-                            predictedDataRepository.saveAll(predictedCache.get());
+                            predictedDataRepository.saveAllOnCollectionName(predictedCache.get(), networkId.toString());
                             predictedCache.set(new ArrayList<>()); // Clear the cache after saving
                         }
                     });
@@ -127,7 +127,7 @@ public class NeuralService {
                     // On completion, save remaining data in cache
                     var cache = predictedCache.get();
                     cache.add(currentPredictedData.get());
-                    predictedDataRepository.saveAll(cache);
+                    predictedDataRepository.saveAllOnCollectionName(cache, networkId.toString());
                     latch.countDown();
                     System.out.println("Training completed for network: " + networkId);
                 });
