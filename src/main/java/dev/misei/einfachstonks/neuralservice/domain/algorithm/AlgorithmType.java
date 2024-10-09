@@ -1,4 +1,4 @@
-package dev.misei.einfachstonks.neuralservice.dataenum;
+package dev.misei.einfachstonks.neuralservice.domain.algorithm;
 
 public enum AlgorithmType {
     SIGMOID {

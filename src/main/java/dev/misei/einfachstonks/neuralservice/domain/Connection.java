@@ -1,6 +1,6 @@
-package dev.misei.einfachstonks.neuralservice;
+package dev.misei.einfachstonks.neuralservice.domain;
 
-import dev.misei.einfachstonks.neuralservice.dataenum.Algorithm;
+import dev.misei.einfachstonks.neuralservice.domain.algorithm.Algorithm;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
