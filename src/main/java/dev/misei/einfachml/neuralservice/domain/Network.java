@@ -1,61 +1,40 @@
 package dev.misei.einfachml.neuralservice.domain;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.misei.einfachml.neuralservice.EpochCountDown;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
-import dev.misei.einfachml.neuralservice.domain.data.Dataset;
-import dev.misei.einfachml.neuralservice.model.PredictedPoint;
+import dev.misei.einfachml.repository.model.DataPair;
+import dev.misei.einfachml.repository.model.PredictedData;
+import dev.misei.einfachml.util.EpochCountDown;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 //TODO: Refactor antipattern
+//TODO: Lock to avoid multiple ops
+//TODO: Inmmutable Algorithm
+@Slf4j
+@Getter
 public class Network extends ArrayList<Layer> {
 
     private final Algorithm algorithm;
     private final List<Connection> inboundFeeder;
     private final List<Connection> outboundFeeder;
-    private final AtomicBoolean operationInProgress = new AtomicBoolean(false);
-    private final Dataset dataset;
-    private int accumulatedTrainedEpochs;
+    private final Status status;
 
-    private Network(Algorithm algorithm, Dataset dataset) {
+    private Network(Algorithm algorithm) {
         this.algorithm = algorithm;
         this.inboundFeeder = new ArrayList<>();
         this.outboundFeeder = new ArrayList<>();
-        this.dataset = dataset;
-        this.accumulatedTrainedEpochs = 0;
+        this.status = new Status(false, 0);
     }
 
-    private static <T> T deepCopy(T incoming) {
-        try {
-            var objectMapper = new ObjectMapper();
-            String result = objectMapper.writeValueAsString(incoming);
-            return objectMapper.readValue(result, new TypeReference<T>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    //TODO: Lock to avoid multiple ops
-
-    public static Network create(Algorithm incomingAlgorithm, Dataset incomingDataset) {
-        Algorithm algorithm = incomingAlgorithm;
-        Dataset dataset = incomingDataset;
-
-        //TODO: This must go out
-        //Assert.isTrue(inputs.size() == algorithm.getInputSize(), "Input size does not match expected size");
-        //Assert.isTrue(outputs.size() == algorithm.getOutputSize(), "Output size does not match expected size");
-
-        Network result = new Network(algorithm, dataset);
+    public static Network create(Algorithm algorithm) {
+        Network result = new Network(algorithm);
 
         // 3D structure: layer -> sub-layer -> neurons
         result.addAll(algorithm.drawShape().stream()
@@ -70,72 +49,41 @@ public class Network extends ArrayList<Layer> {
         return result;
     }
 
-    public Flux<PredictedPoint> predict(Dataset innerDataset, EpochCountDown latch) {
-        if (operationInProgress.get()) {
-            return Flux.error(() -> new IllegalStateException("On Going Ops"));
-        }
-        return Flux.<PredictedPoint>create(sink -> {
-                    operationInProgress.set(true);
-                    compute(deepCopy(innerDataset), 0, false, sink);
-                    latch.countDown();
-                    sink.complete();
-                })
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnTerminate(() -> operationInProgress.set(false))
-                .doOnComplete(() -> System.out.println("Prediction completed"));
-    }
-
-    public Flux<PredictedPoint> train(int epochs, EpochCountDown latch) {
-        return train(epochs, dataset.size(), latch);
-    }
-
-    public Flux<PredictedPoint> train(int epochs, int pastWindowTime, EpochCountDown latch) {
-        if (operationInProgress.get()) {
+    public Flux<PredictedData> computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, EpochCountDown latch) {
+        if (status.isRunning()) {
             return Flux.error(() -> new IllegalStateException("On Going Ops"));
         }
 
-        return Flux.<PredictedPoint>create(sink -> {
-                    operationInProgress.set(true);
+        return Flux.<PredictedData>create(sink -> {
+                    status.setRunning(true);
                     IntStream.range(0, epochs).forEach(value -> {
-                        compute(dataset, Math.max(0, dataset.size() - pastWindowTime), true, sink);
+                        compute(dataset, forTraining, sink);
+
+                        if (forTraining) {
+                            status.incrementAccEpoch();
+                        }
+
                         latch.countDown();
                     });
 
                     sink.complete();
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnTerminate(() -> {
-                    operationInProgress.set(false);
-                })
+                .doOnTerminate(() -> status.setRunning(false))
                 .doOnComplete(() -> System.out.println("Training completed"));
     }
 
-    public Flux<PredictedPoint> merge(Dataset innerDataset, int pastWindowTime, int epochs, EpochCountDown latch) {
-        if (!innerDataset.isCompatible(this.dataset)) {
-            throw new IllegalArgumentException("Datasets are not compatible on merge");
-        }
+    private void compute(List<DataPair> dataset, boolean forTraining, FluxSink<PredictedData> sinkPoint) {
+        dataset.forEach(dataPair -> {
+            computeForward(dataPair.getInputs());
 
-        this.dataset.addAll(innerDataset);
-        return train(epochs, pastWindowTime, latch);
-    }
+            sinkPoint.next(new PredictedData(dataPair.getNetworkId(), status.getAccumulatedEpochs(),
+                    outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
 
-    private void compute(Dataset innerDataset, int indexStart, boolean train, FluxSink<PredictedPoint> sinkPoint) {
-        for (int j = indexStart; j < innerDataset.size(); j++) {
-
-            computeForward(innerDataset.get(j).getInputs());
-
-            sinkPoint.next(new PredictedPoint(innerDataset.get(j),
-                    outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
-                    accumulatedTrainedEpochs));
-
-            if (train) {
-                computeBackward(innerDataset.get(j).getOutputs());
+            if (forTraining) {
+                computeBackward(dataPair.getExpected());
             }
-        }
-
-        if (train) {
-            ++accumulatedTrainedEpochs;
-        }
+        });
     }
 
     private void computeForward(List<Double> inputs) {
@@ -191,7 +139,7 @@ public class Network extends ArrayList<Layer> {
         this.getLast().getFirst().forEach(neuron -> outboundFeeder.addAll(neuron.outboundConnections));
     }
 
-    public synchronized int getAccumulatedTrainedEpochs() {
-        return accumulatedTrainedEpochs;
+    public synchronized Algorithm getAlgorithm() {
+        return algorithm;
     }
 }

@@ -13,4 +13,13 @@ public enum StandardComplexity {
     OMG(3);
 
     private final double complexityValue;
+
+    public static StandardComplexity fromValue(double value) {
+        for (StandardComplexity complexity : StandardComplexity.values()) {
+            if (complexity.getComplexityValue() == value) {
+                return complexity;
+            }
+        }
+        throw new IllegalArgumentException("No StandardComplexity found for value: " + value);
+    }
 }

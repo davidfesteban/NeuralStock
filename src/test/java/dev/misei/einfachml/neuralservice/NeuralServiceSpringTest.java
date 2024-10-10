@@ -32,9 +32,9 @@ public class NeuralServiceSpringTest {
                 StandardComplexity.ADVANCED.getComplexityValue(), false, AlgorithmType.LEAKY_RELU, StandardShape.PERCEPTRON), createDatasetSum()));
 
 
-        var latch = neuralService.trainElasticAsync(uuid, 10000);
+        var latch = neuralService.computeElasticAsync(uuid, 10000);
         //neuralService.predictAsync(uuid, 10000); Busy case
-        var latch2 = neuralService.trainElasticAsync(uuid2, 10000);
+        var latch2 = neuralService.computeElasticAsync(uuid2, 10000);
 
         latch.await();
         latch2.await();

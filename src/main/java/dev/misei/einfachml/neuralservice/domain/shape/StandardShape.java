@@ -7,6 +7,10 @@ import java.util.List;
 public enum StandardShape implements Shape {
     PERCEPTRON {
         @Override
+        public String getName() {
+            return this.name();
+        }
+        @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
             shape.add(List.of(inputSize));
@@ -24,6 +28,10 @@ public enum StandardShape implements Shape {
         }
     },
     SQUARE {
+        @Override
+        public String getName() {
+            return this.name();
+        }
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -43,6 +51,10 @@ public enum StandardShape implements Shape {
     },
     TRIANGLE {
         @Override
+        public String getName() {
+            return this.name();
+        }
+        @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
             shape.add(List.of(inputSize));
@@ -60,6 +72,10 @@ public enum StandardShape implements Shape {
         }
     },
     COMPRESSOR {
+        @Override
+        public String getName() {
+            return this.name();
+        }
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -88,6 +104,10 @@ public enum StandardShape implements Shape {
 
     },
     EXPANDER {
+        @Override
+        public String getName() {
+            return this.name();
+        }
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();

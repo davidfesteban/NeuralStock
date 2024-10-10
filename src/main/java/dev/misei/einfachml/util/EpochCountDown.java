@@ -1,19 +1,23 @@
-package dev.misei.einfachml.neuralservice;
+package dev.misei.einfachml.util;
+
+import lombok.Getter;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+@Getter
 public class EpochCountDown extends CountDownLatch {
 
-    private final AtomicBoolean isCanceled;
+    private final int epochs;
+    private boolean isCanceled;
 
     public EpochCountDown(int count) {
         super(count);
-        this.isCanceled = new AtomicBoolean(false);
+        this.epochs = count;
+        this.isCanceled = count == 0;
     }
 
     public void terminate() {
-        isCanceled.set(true);
+        isCanceled = true;
         while (this.getCount() > 0) {
             this.countDown();
         }
