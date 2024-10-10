@@ -10,8 +10,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 //TODO: Refactor antipattern
@@ -77,7 +79,7 @@ public class Network extends ArrayList<Layer> {
         dataset.forEach(dataPair -> {
             computeForward(dataPair.getInputs());
 
-            sinkPoint.next(new PredictedData(dataPair.getNetworkId(), status.getAccumulatedEpochs(),
+            sinkPoint.next(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
                     outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
 
             if (forTraining) {

@@ -63,7 +63,7 @@ public class NeuralService {
 
     public EpochCountDown computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs, boolean forTraining) {
         EpochCountDown latch = new EpochCountDown(epochs);
-        var bufferSize = Math.max(1, (dataset.size() / 10) + (dataset.get(0).getInputs().size() / 10) + (epochs / 100));
+        var bufferSize = Math.max(1, (dataset.size() / 10) + (dataset.get(0).getInputs().size() / 10) + (epochs / 10));
         log.info(String.format("Buffer size for %s: %d", networkId, bufferSize));
         var flux = networkList.get(networkId).computeFlux(dataset, epochs, forTraining, latch)
                 .buffer(bufferSize);

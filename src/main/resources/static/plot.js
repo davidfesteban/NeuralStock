@@ -1,4 +1,3 @@
-import Plotly from 'plotly.js-dist';
 
 // Global
 let networkBoards;
@@ -110,7 +109,7 @@ function reloadBoard(networkId) {
             const data = [trace];
 
             // Render the plot inside the div with id "plotly-mse-errors"
-            Plotly.newPlot('plotly-mse-errors', data, layout);
+            //Plotly.newPlot('plotly-mse-errors', data, layout);
 
 
 

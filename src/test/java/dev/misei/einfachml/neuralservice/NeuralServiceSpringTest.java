@@ -1,19 +1,23 @@
 package dev.misei.einfachml.neuralservice;
 
+import dev.misei.einfachml.controller.EinfachAPI;
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.neuralservice.domain.algorithm.AlgorithmType;
 import dev.misei.einfachml.neuralservice.domain.algorithm.StandardComplexity;
-import dev.misei.einfachml.neuralservice.domain.data.Datapair;
-import dev.misei.einfachml.neuralservice.domain.data.Dataset;
 import dev.misei.einfachml.neuralservice.domain.shape.StandardShape;
+import dev.misei.einfachml.repository.model.AlgorithmBoard;
+import dev.misei.einfachml.repository.model.DataPair;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
@@ -21,27 +25,40 @@ import java.util.stream.IntStream;
 public class NeuralServiceSpringTest {
 
     @Autowired
-    NeuralService neuralService;
+    EinfachAPI einfachAPI;
 
     @Test
-    void letsgo() throws ExecutionException, InterruptedException {
-        var uuid = neuralService.create(Network.create(new Algorithm(2, 1, 0.01,
-                StandardComplexity.NORMAL.getComplexityValue(), false, AlgorithmType.LEAKY_RELU, StandardShape.PERCEPTRON), createDatasetSum()));
+    void letsgo() throws Throwable {
+        var networkA = einfachAPI.createNetwork(new AlgorithmBoard(2, 1, 0.01, StandardComplexity.NORMAL.getComplexityValue(), false,
+                AlgorithmType.LEAKY_RELU.name(), StandardShape.PERCEPTRON.name(), null));
 
-        var uuid2 = neuralService.create(Network.create(new Algorithm(2, 1, 0.01,
-                StandardComplexity.ADVANCED.getComplexityValue(), false, AlgorithmType.LEAKY_RELU, StandardShape.PERCEPTRON), createDatasetSum()));
+        var networkB = einfachAPI.createNetwork(new AlgorithmBoard(2, 1, 0.1, StandardComplexity.NORMAL.getComplexityValue(), false,
+                AlgorithmType.LEAKY_RELU.name(), StandardShape.PERCEPTRON.name(), null));
 
+        var networkC = einfachAPI.createNetwork(new AlgorithmBoard(2, 1, 0.01, StandardComplexity.HARD.getComplexityValue(), false,
+                AlgorithmType.LEAKY_RELU.name(), StandardShape.PERCEPTRON.name(), null));
 
-        var latch = neuralService.computeElasticAsync(uuid, 10000);
-        //neuralService.predictAsync(uuid, 10000); Busy case
-        var latch2 = neuralService.computeElasticAsync(uuid2, 10000);
+        einfachAPI.includeDataSet(networkA, createDatasetSum(networkA));
+        einfachAPI.includeDataSet(networkB, createDatasetSum(networkB));
+        einfachAPI.includeDataSet(networkC, createDatasetSum(networkC));
 
-        latch.await();
-        latch2.await();
+        var fluxA = einfachAPI.compute(networkA, 1000, null, null);
+        var fluxB = einfachAPI.compute(networkB, 1000, null, null);
+        var fluxC = einfachAPI.compute(networkC, 1000, null, null);
+
+        fluxA.blockLast();
+        fluxB.blockLast();
+        fluxC.blockLast();
     }
 
-    private Dataset createDatasetSum() {
-        List<Datapair> datapairs = new ArrayList<>();
+    @Test
+    void letsgao() throws Throwable {
+        var networkA = einfachAPI.createNetwork(new AlgorithmBoard(2, 1, 0.01, StandardComplexity.NORMAL.getComplexityValue(), false,
+                AlgorithmType.LEAKY_RELU.name(), StandardShape.PERCEPTRON.name(), null));
+    }
+
+    private List<DataPair> createDatasetSum(UUID networkId) {
+        List<DataPair> datapairs = new ArrayList<>();
 
         IntStream.range(0, 10).forEach(new IntConsumer() {
             @Override
@@ -54,12 +71,12 @@ public class NeuralServiceSpringTest {
                         input.add((double) x);
                         input.add((double) y);
                         output.add((double) (x + y));
-                        datapairs.add(new Datapair(input, output));
+                        datapairs.add(new DataPair(UUID.randomUUID(),Instant.now().toEpochMilli(), networkId, input, output));
                     }
                 });
             }
         });
 
-        return new Dataset(datapairs);
+        return datapairs;
     }
 }

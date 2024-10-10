@@ -21,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,7 +44,7 @@ public class EinfachAPI {
     private ObjectMapper objectMapper;
 
     @PostMapping("/createNetwork")
-    public UUID createNetwork(AlgorithmBoard algorithmBoard) {
+    public UUID createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
         Network network = Network.create(AlgorithmBoardMapper.from(algorithmBoard));
         var uuid = UUID.randomUUID();
 
@@ -135,6 +137,7 @@ public class EinfachAPI {
         var countDown = neuralService.computeElasticAsync(networkId, dataset, epochs, true);
 
         return Flux.interval(Duration.ofSeconds(1))
+                .subscribeOn(Schedulers.boundedElastic())
                 .map(sequence -> String.format("Epoch: %d/%d", countDown.getEpochs() - countDown.getCount(), countDown.getEpochs()))
                 .takeUntil(sequence -> countDown.getCount() == 0);
     }
@@ -144,6 +147,7 @@ public class EinfachAPI {
         var countDown = neuralService.computeElasticAsync(networkId, dataSet, 1, false);
 
         return Flux.interval(Duration.ofSeconds(1))
+                .subscribeOn(Schedulers.boundedElastic())
                 .map(sequence -> String.format("Epoch: %d/%d", countDown.getEpochs() - countDown.getCount(), countDown.getEpochs()))
                 .takeUntil(sequence -> countDown.getCount() == 0);
     }
@@ -151,6 +155,7 @@ public class EinfachAPI {
     @GetMapping("/reloadBoard")
     public NetworkBoard reloadBoard(UUID networkId) {
         Network network = neuralService.getNetwork(networkId);
+        System.out.println(network);
         EpochCountDown epochCountDown = neuralService.getEpochCountDown(networkId);
         NetworkBoard networkBoard = networkBoardRepository.findById(networkId).orElseThrow(() -> new IllegalArgumentException("Network not found"));
         List<PredictedData> predictedDataList = neuralService.getAllPredictions(networkId);

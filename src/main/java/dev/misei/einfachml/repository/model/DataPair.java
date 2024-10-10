@@ -18,7 +18,7 @@ import java.util.UUID;
 public class DataPair implements Comparable<DataPair> {
 
     @Id
-    private final UUID uuid = UUID.randomUUID();
+    private UUID uuid = UUID.randomUUID();
 
     private long createdAt;
     private final UUID networkId;

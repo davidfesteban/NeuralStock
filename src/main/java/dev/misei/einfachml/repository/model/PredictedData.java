@@ -18,8 +18,8 @@ import java.util.UUID;
 public class PredictedData implements Comparable<PredictedData> {
 
     @Id
-    private final UUID uuid = UUID.randomUUID();
-    private final long createdAt = Instant.now().toEpochMilli();
+    private UUID uuid = UUID.randomUUID();
+    private long createdAt = Instant.now().toEpochMilli();
     private final UUID networkId;
 
     private int epochHappened;
