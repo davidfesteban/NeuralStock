@@ -1,8 +1,9 @@
 
 // Global
-let currentBoard;
+let currentBoardId;
 let networkBoards;
 let predictions;
+let plotlyLibrary;
 
 // Trigger fetchAllNetworks when the page loads
 window.onload = function() {
@@ -14,46 +15,43 @@ window.onload = function() {
 
 //API Fetch
 function fetchAllNetworks() {
-    fetch('/getAllNetworks')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+    const eventSource = new EventSource('/events');
+
+    eventSource.onmessage = function(event) {
+        console.log("Received event: ", event.data);
+        networkBoards = event.data.map(network => NetworkBoard.fromJson(network));
+        const dropdown = document.getElementById("network-uuid-list");
+        dropdown.innerHTML = '';
+
+        networkBoards.forEach(networkBoard => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+
+            a.classList.add('dropdown-item');
+            a.href = '#';  // You can change this if needed for actual navigation
+            a.textContent = networkBoard.networkId;
+
+            if(currentBoardId === networkBoard.networkId) {
+                reloadBoard(networkBoard);
             }
-            return response.json();
-        })
-        .then(networksJson => {
-            networkBoards = networksJson.map(network => NetworkBoard.fromJson(network));
-            const dropdown = document.getElementById("network-uuid-list");
-            dropdown.innerHTML = '';
 
-            networkBoards.forEach(networkBoard => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-
-                a.classList.add('dropdown-item');
-                a.href = '#';  // You can change this if needed for actual navigation
-                a.textContent = networkBoard.networkId;
-
-                a.addEventListener('click', () => {
-                    reloadBoard(networkBoard.networkId);
-                });
-
-                li.appendChild(a);
-                dropdown.appendChild(li);
+            a.addEventListener('click', () => {
+                currentBoardId = networkBoard.networkId;
+                reloadBoard(networkBoard);
             });
 
-            // Process the list of NetworkBoard instances
-            networkBoards.forEach(networkBoard => {
-                console.log("NetworkBoard:", networkBoard);
-            });
-        })
-        .catch(error => {
-            console.error('There has been a problem with your fetch operation:', error);
+            li.appendChild(a);
+            dropdown.appendChild(li);
         });
+    };
 }
 
 
-function reloadBoard(networkId) {
+function reloadBoard(networkBoard) {
+
+    mapToDOM(networkBoard);
+    fetchPlot(networkId);
+
     // Construct the URL with the networkId as a query parameter
     const url = `/reloadBoard?networkId=${networkId}`;
 
@@ -145,6 +143,27 @@ function getAllPredictions(networkId) {
         });
 }
 
+async function loadPlotly() {
+    try {
+        plotlyLibrary = await import("https://cdn.plot.ly/plotly-latest.min.js");
+
+        // Access Plotly from the global window object
+        const Plotly = window.Plotly;
+
+        const data = [{
+            x: [1, 2, 3, 4, 5],
+            y: [1, 9, 4, 7, 5]
+        }];
+
+        const layout = {
+            title: 'Plotly Example Chart'
+        };
+
+        Plotly.newPlot('chart', data, layout);
+    } catch (error) {
+        console.error('Failed to load Plotly:', error);
+    }
+}
 
 //Classes
 class NetworkBoard {
