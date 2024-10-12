@@ -1,21 +1,22 @@
 package dev.misei.einfachml.neuralservice;
 
 import dev.misei.einfachml.neuralservice.domain.Network;
+import dev.misei.einfachml.neuralservice.domain.Status;
 import dev.misei.einfachml.repository.PredictedDataRepository;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
-import dev.misei.einfachml.util.EpochCountDown;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 //TODO: Load/Unload the Network
 @Service
@@ -24,8 +25,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 public class NeuralService {
 
+    private static final int SAVE_RATE = 1000;
+    private static final int BUFFER_SIZE = 3000;
     private final Map<UUID, Network> networkList = new HashMap<>();
-    private final Map<UUID, EpochCountDown> countDownList = new ConcurrentHashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Queue<PredictedData> predictedDataCache = new ConcurrentLinkedQueue<>();
 
     private PredictedDataRepository predictedDataRepository;
 
@@ -35,61 +39,59 @@ public class NeuralService {
         return uuid;
     }
 
-    public List<PredictedData> getAllPredictions(UUID networkId) {
-        return predictedDataRepository.findByNetworkId(networkId).stream().sorted().toList();
-    }
+    @Async
+    public CompletableFuture<Network> delete(UUID networkId) {
+        Network network = networkList.get(networkId);
 
-    public Network getNetwork(UUID networkId) {
-        return networkList.get(networkId);
-    }
-
-    public EpochCountDown getEpochCountDown(UUID networkId) {
-        return countDownList.getOrDefault(networkId, new EpochCountDown(0));
-    }
-
-    public Network delete(UUID networkId) {
-
-        if (countDownList.containsKey(networkId) && countDownList.get(networkId).isCanceled()) {
-            countDownList.remove(networkId);
-        } else if (countDownList.containsKey(networkId)) {
-            return null;
+        if (network.getStatus().isRunning()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
         }
 
-        Network network = networkList.remove(networkId);
+        networkList.remove(networkId);
+        scheduledDataSave(); //When called from the same class, it is not async
         predictedDataRepository.deleteByNetworkId(networkId);
 
-        return network;
+        return CompletableFuture.completedFuture(network);
     }
 
-    public EpochCountDown computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs, boolean forTraining) {
-        EpochCountDown latch = new EpochCountDown(epochs);
-        var bufferSize = Math.max(1, (dataset.size() / 10) + (dataset.get(0).getInputs().size() / 10) + (epochs / 10));
-        log.info(String.format("Buffer size for %s: %d", networkId, bufferSize));
-        var flux = networkList.get(networkId).computeFlux(dataset, epochs, forTraining, latch)
-                .buffer(bufferSize);
-
-        subscribe(networkId, flux, latch);
-
-        return latch;
+    @Async
+    public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, int startEpoch, int endEpoch) {
+        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(networkId, startEpoch, endEpoch);
     }
 
-    private void subscribe(UUID networkId, Flux<List<PredictedData>> flux, EpochCountDown epochCountDown) {
-        countDownList.put(networkId, epochCountDown);
-        log.info(String.format("Subscribed to: %s", networkId));
-        flux
-                .subscribe(batch -> {
-                    log.info(String.format("Processing next batch: %d, on %s", batch.size(), networkId));
-                    predictedDataRepository.saveAll(batch);
-                }, throwable -> {
-                    terminate(epochCountDown, networkId, String.format("Error during training: %s", throwable.getMessage()));
-                }, () -> {
-                    terminate(epochCountDown, networkId, String.format("Training completed on Network: %s", networkId));
-                });
+    @Async
+    public CompletableFuture<List<Status>> getAllStatus() {
+        return CompletableFuture.completedFuture(networkList.values().stream().map(Network::getStatus).toList());
     }
 
-    private void terminate(EpochCountDown epochCountDown, UUID networkId, String message) {
-        log.info(message);
-        epochCountDown.terminate();
-        countDownList.remove(networkId);
+    @Async
+    public CompletableFuture<Status> computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs, boolean forTraining) {
+        return CompletableFuture.completedFuture(networkList.get(networkId).computeFlux(dataset, epochs, forTraining, predictedDataCache::add));
+    }
+
+    @Async
+    @Scheduled(fixedRate = SAVE_RATE)
+    void scheduledDataSave() {
+        if (lock.tryLock()) {
+            try {
+                List<PredictedData> buffer = new ArrayList<>();
+                PredictedData predictedData = new PredictedData();
+
+                while (buffer.size() <= BUFFER_SIZE && predictedData != null) {
+                    predictedData = predictedDataCache.poll();
+                    if (predictedData != null) {
+                        buffer.add(predictedData);
+                    }
+                }
+
+                log.info(String.format("Saving on database %d elements", buffer.size()));
+                predictedDataRepository.saveAll(buffer);
+                log.info("Saved on database");
+            } finally {
+                lock.unlock();
+            }
+        } else {
+            log.info("Task skipped - another instance is already running");
+        }
     }
 }

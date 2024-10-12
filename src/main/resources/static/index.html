@@ -10,10 +10,10 @@
 </head>
 <body>
 
-<h4 class="text-center">Einfach Machine Learning - Easy ML for Java</h4>
-
 <!-- Dropdown Menu -->
 <div class="dropdown text-center mb-4">
+    <h4 class="text-center">Einfach Machine Learning - Easy ML for Java</h4>
+
     <button aria-expanded="false" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" type="button">
         Neural Networks
     </button>
@@ -163,6 +163,34 @@
         </ul>
     </div>
 
+    <!-- Card 4 -->
+    <div class="card" style="width: 18rem;">
+        <div class="card-header">
+            DataSet and Predictions
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">DataSet Size</div>
+                </div>
+                <span class="badge text-bg-primary rounded-pill text-wrap" id="dataset-size">14</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">Predictions Size</div>
+                </div>
+                <span class="badge text-bg-primary rounded-pill text-wrap" id="predictions-size">14</span>
+            </li>
+        </ul>
+    </div>
+
+</div>
+
+<!-- Dropdown Menu -->
+<div class="button text-center mb-4">
+    <button aria-expanded="false" class="btn btn-primary" type="button">
+        Load Charts
+    </button>
 </div>
 
 <!-- Plotly Charts Section -->
@@ -176,7 +204,7 @@
             <h5>Neural Shape</h5>
             <div id="plotly-neural-shape"></div>
         </div>
-    </div>
+    </div> <!--
     <div class="row text-center">
         <div class="col-md-6 mb-4">
             <h5>Training Epochs</h5>
@@ -186,7 +214,7 @@
             <h5>Training Times</h5>
             <div id="plot4"></div>
         </div>
-    </div>
+    </div> -->
     <div class="row text-center">
         <div class="col-md-6 mb-4">
             <h5>Scatter Predicted</h5>
@@ -201,7 +229,7 @@
 
 <!-- Model Upload and Download Section -->
 <div class="container mt-5">
-    <h2>Model Upload and Download</h2>
+    <h2>Model</h2>
 
     <!-- File Upload Form -->
     <form action="/upload" enctype="multipart/form-data" method="POST">
@@ -210,12 +238,8 @@
             <input class="form-control" id="fileUpload" name="file" type="file">
         </div>
         <button class="btn btn-primary" type="submit">Upload File</button>
-    </form>
-
-    <!-- File Download Button -->
-    <div class="mt-3">
         <button class="btn btn-success" onclick="downloadFile()">Download File</button>
-    </div>
+    </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

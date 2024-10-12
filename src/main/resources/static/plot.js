@@ -1,11 +1,15 @@
 
 // Global
+let currentBoard;
 let networkBoards;
 let predictions;
 
 // Trigger fetchAllNetworks when the page loads
 window.onload = function() {
+    //SSE Emitter for fetching all Network Boards & Status
     fetchAllNetworks();
+
+    //Outside here, a button to load the technical charts with a loader
 };
 
 //API Fetch

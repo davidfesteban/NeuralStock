@@ -5,13 +5,12 @@ import lombok.Getter;
 import java.util.concurrent.CountDownLatch;
 
 @Getter
-public class EpochCountDown extends CountDownLatch {
+public class EpochCountDown {
 
     private final int epochs;
     private boolean isCanceled;
 
     public EpochCountDown(int count) {
-        super(count);
         this.epochs = count;
         this.isCanceled = count == 0;
     }

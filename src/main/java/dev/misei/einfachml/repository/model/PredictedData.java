@@ -1,9 +1,6 @@
 package dev.misei.einfachml.repository.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NonNull;
-import lombok.ToString;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -30,6 +27,10 @@ public class PredictedData implements Comparable<PredictedData> {
     //Copy of DataSet to reduce cross dependencies
     private List<Double> inputs;
     private List<Double> expected;
+
+    public PredictedData(){
+        networkId = UUID.randomUUID();
+    }
 
     @Override
     public int compareTo(@NonNull PredictedData o) {

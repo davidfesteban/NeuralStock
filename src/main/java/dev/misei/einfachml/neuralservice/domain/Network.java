@@ -1,14 +1,13 @@
 package dev.misei.einfachml.neuralservice.domain;
 
+import dev.misei.einfachml.neuralservice.PredictionListener;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import dev.misei.einfachml.util.EpochCountDown;
 import lombok.Getter;
+import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,15 +27,15 @@ public class Network extends ArrayList<Layer> {
     private final List<Connection> outboundFeeder;
     private final Status status;
 
-    private Network(Algorithm algorithm) {
+    private Network(UUID networkId, Algorithm algorithm) {
         this.algorithm = algorithm;
         this.inboundFeeder = new ArrayList<>();
         this.outboundFeeder = new ArrayList<>();
-        this.status = new Status(false, 0);
+        this.status = new Status(networkId, false, 0, UUID.randomUUID(),0, 0);
     }
 
-    public static Network create(Algorithm algorithm) {
-        Network result = new Network(algorithm);
+    public static Network create(UUID networkId, Algorithm algorithm) {
+        Network result = new Network(networkId, algorithm);
 
         // 3D structure: layer -> sub-layer -> neurons
         result.addAll(algorithm.drawShape().stream()
@@ -51,41 +50,36 @@ public class Network extends ArrayList<Layer> {
         return result;
     }
 
-    public Flux<PredictedData> computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, EpochCountDown latch) {
+    //Avoid to have huge collections in memory
+    public Status computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, PredictionListener predictionListener) {
         if (status.isRunning()) {
-            return Flux.error(() -> new IllegalStateException("On Going Ops"));
+            return status;
         }
 
-        return Flux.<PredictedData>create(sink -> {
-                    status.setRunning(true);
-                    IntStream.range(0, epochs).forEach(value -> {
-                        compute(dataset, forTraining, sink);
+        status.setRunning(true);
+        status.setTrainingId(UUID.randomUUID());
+        status.setGoalEpochs(epochs);
 
-                        if (forTraining) {
-                            status.incrementAccEpoch();
-                        }
+        IntStream.range(0, epochs).forEach(value -> {
+            dataset.forEach(dataPair -> {
+                computeForward(dataPair.getInputs());
 
-                        latch.countDown();
-                    });
+                predictionListener.onPrediction(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
+                        outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
 
-                    sink.complete();
-                })
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnTerminate(() -> status.setRunning(false))
-                .doOnComplete(() -> System.out.println("Training completed"));
-    }
+                if (forTraining) {
+                    computeBackward(dataPair.getExpected());
+                }
+            });
 
-    private void compute(List<DataPair> dataset, boolean forTraining, FluxSink<PredictedData> sinkPoint) {
-        dataset.forEach(dataPair -> {
-            computeForward(dataPair.getInputs());
-
-            sinkPoint.next(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
-                    outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
-
+            status.setCurrentEpochToGoal(value);
             if (forTraining) {
-                computeBackward(dataPair.getExpected());
+                status.incrementAccEpoch();
             }
         });
+
+        status.setRunning(false);
+        return status;
     }
 
     private void computeForward(List<Double> inputs) {
@@ -143,5 +137,9 @@ public class Network extends ArrayList<Layer> {
 
     public synchronized Algorithm getAlgorithm() {
         return algorithm;
+    }
+
+    public synchronized Status getStatus() {
+        return status;
     }
 }

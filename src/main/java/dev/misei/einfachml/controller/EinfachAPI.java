@@ -21,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.File;
@@ -30,9 +29,12 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-//TODO: Spread more Flux
+//TODO: @GetMapping("/save & upload DataSet")
+//TODO: Backup Scheduled for Networks & load
+//TODO: Clean up Network static
 @RestController
 @AllArgsConstructor
 public class EinfachAPI {
@@ -45,68 +47,53 @@ public class EinfachAPI {
 
     @PostMapping("/createNetwork")
     public UUID createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
-        Network network = Network.create(AlgorithmBoardMapper.from(algorithmBoard));
-        var uuid = UUID.randomUUID();
+        Network network = Network.create(UUID.randomUUID(), AlgorithmBoardMapper.from(algorithmBoard));
 
-        networkBoardRepository.save(NetworkBoardMapper.from(uuid, algorithmBoard, network));
-        return neuralService.load(uuid, network);
-    }
-
-    @GetMapping("/loadNetwork")
-    public UUID loadNetwork(UUID networkId) throws Throwable {
-        if(!networkBoardRepository.existsById(networkId)) {
-            throw new IllegalArgumentException("Network UUID is not registered in memory");
-        }
-
-        ClassPathResource resource = new ClassPathResource(String.format("static/models/network_%s.json", networkId));
-        Network network = objectMapper.readValue(resource.getFile(), Network.class);
-        network.reconnectAll();
-
+        UUID networkId = network.getStatus().getNetworkId();
+        networkBoardRepository.save(NetworkBoardMapper.from(networkId, algorithmBoard, network));
         return neuralService.load(networkId, network);
     }
 
-    @PostMapping("/uploadNetwork")
-    public UUID uploadJsonFile(@RequestParam("file") MultipartFile networkJsonFile) throws IOException {
-        if (networkJsonFile.isEmpty()) {
-            throw new IllegalArgumentException("Network Json File is empty");
-        }
+    //@PostMapping("/uploadNetwork")
+    //public UUID uploadJsonFile(@RequestParam("file") MultipartFile networkJsonFile) throws IOException {
+    //    if (networkJsonFile.isEmpty()) {
+    //        throw new IllegalArgumentException("Network Json File is empty");
+    //    }
+//
+    //    Network network = objectMapper.readValue(networkJsonFile.getInputStream(), Network.class);
+    //    network.reconnectAll();
+//
+    //    UUID networkId = network.getStatus().getNetworkId();
+    //    networkBoardRepository.save(NetworkBoardMapper.from(networkId, AlgorithmBoardMapper.to(network.getAlgorithm()), network));
+    //    return neuralService.load(networkId, network);
+    //}
+//
+    //@GetMapping("/saveDownloadNetwork")
+    //public ResponseEntity<InputStreamResource> downloadNetwork(@RequestParam UUID networkId) throws IOException {
+//
+    //    Network network = neuralService.getNetworkList().get(networkId);
+    //    File file = new File(String.format("static/models/network_%s.json", networkId));
+    //    objectMapper.writeValue(file, network);
+//
+    //    InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+//
+    //    HttpHeaders headers = new HttpHeaders();
+    //    headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=network_" + networkId + ".json");
+//
+    //    return ResponseEntity.ok()
+    //            .headers(headers)
+    //            .contentLength(file.length())
+    //            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+    //            .body(resource);
+    //}
 
-        Network network = objectMapper.readValue(networkJsonFile.getInputStream(), Network.class);
-        network.reconnectAll();
 
-        var uuid = UUID.randomUUID();
-
-        networkBoardRepository.save(NetworkBoardMapper.from(uuid, AlgorithmBoardMapper.to(network.getAlgorithm()), network));
-        return uuid;
-    }
-
-    @GetMapping("/saveDownloadNetwork")
-    public ResponseEntity<InputStreamResource> downloadNetwork(@RequestParam UUID networkId) throws IOException {
-
-        Network network = neuralService.getNetworkList().get(networkId);
-        File file = new File(String.format("static/models/network_%s.json", networkId));
-        objectMapper.writeValue(file, network);
-
-        InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=network_" + networkId + ".json");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentLength(file.length())
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
-    }
-
-    //TODO: @GetMapping("/save & upload DataSet")
-
-    @GetMapping("/deleteAll")
-    public Network deleteNetwork(@RequestParam UUID networkId) {
-        networkBoardRepository.deleteById(networkId);
-        dataService.cleanDatapair(networkId);
-        return neuralService.delete(networkId);
-    }
+    //@GetMapping("/deleteAll")
+    //public Network deleteNetwork(@RequestParam UUID networkId) {
+    //    networkBoardRepository.deleteById(networkId);
+    //    dataService.cleanDatapair(networkId);
+    //    return neuralService.delete(networkId);
+    //}
 
     @GetMapping("/getAllNetworks")
     public List<NetworkBoard> getAllNetworks() {
@@ -124,8 +111,8 @@ public class EinfachAPI {
     }
 
     @GetMapping("/compute")
-    public Flux<String> compute(@RequestParam UUID networkId, @RequestParam int epochs, @RequestParam(required = false) Long createdAtStart,
-                        @RequestParam(required = false) Long createdAtEnd) {
+    public CompletableFuture<Void> compute(@RequestParam UUID networkId, @RequestParam int epochs, @RequestParam(required = false) Long createdAtStart,
+                                     @RequestParam(required = false) Long createdAtEnd) {
 
         List<DataPair> dataset = null;
         if(createdAtStart != null && createdAtEnd != null) {
@@ -158,7 +145,7 @@ public class EinfachAPI {
         System.out.println(network);
         EpochCountDown epochCountDown = neuralService.getEpochCountDown(networkId);
         NetworkBoard networkBoard = networkBoardRepository.findById(networkId).orElseThrow(() -> new IllegalArgumentException("Network not found"));
-        List<PredictedData> predictedDataList = neuralService.getAllPredictions(networkId);
+        List<PredictedData> predictedDataList = neuralService.getAllPredictionsByNetwork(networkId);
 
         NetworkBoardMapper.update(networkBoard, network, epochCountDown, predictedDataList);
         networkBoardRepository.deleteById(networkId);
@@ -167,7 +154,7 @@ public class EinfachAPI {
 
     @GetMapping("/getAllPredictions")
     public List<PredictedData> getAllPredictions(@RequestParam UUID networkId) {
-        return neuralService.getAllPredictions(networkId);
+        return neuralService.getAllPredictionsByNetwork(networkId);
     }
 
     //@GetMapping("/getDataSet")
