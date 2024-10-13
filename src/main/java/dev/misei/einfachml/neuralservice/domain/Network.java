@@ -4,11 +4,11 @@ import dev.misei.einfachml.neuralservice.PredictionListener;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
-import dev.misei.einfachml.util.EpochCountDown;
 import lombok.Getter;
-import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,14 +51,16 @@ public class Network extends ArrayList<Layer> {
     }
 
     //Avoid to have huge collections in memory
-    public Status computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, PredictionListener predictionListener) {
+    public void computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, PredictionListener predictionListener, SseEmitter emitter) {
         if (status.isRunning()) {
-            return status;
+            return;
         }
 
         status.setRunning(true);
         status.setTrainingId(UUID.randomUUID());
         status.setGoalEpochs(epochs);
+        System.out.println("Emitting1");
+        emit(emitter);
 
         IntStream.range(0, epochs).forEach(value -> {
             dataset.forEach(dataPair -> {
@@ -73,13 +75,28 @@ public class Network extends ArrayList<Layer> {
             });
 
             status.setCurrentEpochToGoal(value);
+
+            //System.out.println("Emitting2");
+            //emit(emitter);
+
             if (forTraining) {
                 status.incrementAccEpoch();
             }
         });
 
         status.setRunning(false);
-        return status;
+        System.out.println("Emitting3");
+        emit(emitter);
+    }
+
+    private void emit(SseEmitter emitter) {
+        try {
+            emitter.send(status);
+        } catch (IOException e) {
+            System.out.println("EMITTER NETWORK");
+            emitter.complete();
+            System.out.println(e.getMessage());
+        }
     }
 
     private void computeForward(List<Double> inputs) {

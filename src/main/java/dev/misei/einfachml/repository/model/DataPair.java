@@ -6,7 +6,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.lang.NonNull;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,11 +16,10 @@ import java.util.UUID;
 @Data
 public class DataPair implements Comparable<DataPair> {
 
+    private final UUID networkId;
     @Id
     private UUID uuid = UUID.randomUUID();
-
     private long createdAt;
-    private final UUID networkId;
     private List<Double> inputs;
     private List<Double> expected;
 

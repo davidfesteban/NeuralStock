@@ -1,5 +1,6 @@
 package dev.misei.einfachml.repository.model;
 
+import dev.misei.einfachml.neuralservice.domain.Status;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,23 +19,11 @@ public class NetworkBoard {
     @Id
     UUID networkId;
 
-    //Total Training
-    Integer totalEpochs;
-    Long totalTrainingTime;
-
     AlgorithmBoard algorithmBoard;
 
     //Current Status
-    String status;
-    Integer epochGoal;
-    int currentEpoch;
+    Status status;
 
-    //Network Metrics
-    double avgFitnessError;
-    double lastFitnessError;
-    double lastTrainingTime;
-    double avgFitnessWithInEpochs; //This one is a ratio to check how quickly it is learning
-
-    List<Double> mseErrors;
-
+    int datasetSize;
+    int predictionsSize;
 }

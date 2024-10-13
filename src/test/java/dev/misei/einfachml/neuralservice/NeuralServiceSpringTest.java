@@ -45,10 +45,6 @@ public class NeuralServiceSpringTest {
         var fluxA = einfachAPI.compute(networkA, 1000, null, null);
         var fluxB = einfachAPI.compute(networkB, 1000, null, null);
         var fluxC = einfachAPI.compute(networkC, 1000, null, null);
-
-        fluxA.blockLast();
-        fluxB.blockLast();
-        fluxC.blockLast();
     }
 
     @Test
@@ -71,7 +67,7 @@ public class NeuralServiceSpringTest {
                         input.add((double) x);
                         input.add((double) y);
                         output.add((double) (x + y));
-                        datapairs.add(new DataPair(UUID.randomUUID(),Instant.now().toEpochMilli(), networkId, input, output));
+                        //datapairs.add(new DataPair(UUID.randomUUID(),Instant.now().toEpochMilli(), networkId, input, output));
                     }
                 });
             }

@@ -9,6 +9,7 @@ import java.util.UUID;
 @Data
 public class Status {
 
+    //int TotalTrainingTime
     private final UUID networkId;
     private boolean running;
     private int accumulatedEpochs;

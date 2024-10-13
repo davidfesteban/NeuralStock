@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -25,8 +26,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 public class NeuralService {
 
-    private static final int SAVE_RATE = 1000;
-    private static final int BUFFER_SIZE = 3000;
+    private static final int SAVE_RATE = 10000;
+    private static final int BUFFER_SIZE = 10000;
     private final Map<UUID, Network> networkList = new HashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
     private final Queue<PredictedData> predictedDataCache = new ConcurrentLinkedQueue<>();
@@ -55,8 +56,11 @@ public class NeuralService {
     }
 
     @Async
-    public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, int startEpoch, int endEpoch) {
-        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(networkId, startEpoch, endEpoch);
+    public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
+        var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
+        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(networkId,
+                lastEpochAmount == null? 0 : totalEpochs - lastEpochAmount
+                , totalEpochs);
     }
 
     @Async
@@ -65,8 +69,10 @@ public class NeuralService {
     }
 
     @Async
-    public CompletableFuture<Status> computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs, boolean forTraining) {
-        return CompletableFuture.completedFuture(networkList.get(networkId).computeFlux(dataset, epochs, forTraining, predictedDataCache::add));
+    public void computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs,
+                                                       boolean forTraining, SseEmitter sseEmitter) {
+        networkList.get(networkId)
+                .computeFlux(dataset, epochs, forTraining, predictedDataCache::add, sseEmitter);
     }
 
     @Async

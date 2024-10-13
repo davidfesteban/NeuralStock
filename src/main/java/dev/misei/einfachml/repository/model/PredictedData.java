@@ -17,7 +17,7 @@ public class PredictedData implements Comparable<PredictedData> {
     @Id
     private UUID uuid = UUID.randomUUID();
     private long createdAt = Instant.now().toEpochMilli();
-    private final UUID networkId;
+    private UUID networkId;
 
     private int epochHappened;
 

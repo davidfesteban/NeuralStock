@@ -4,10 +4,12 @@ import dev.misei.einfachml.repository.DataPairRepository;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.NetworkBoard;
 import lombok.AllArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @AllArgsConstructor
@@ -55,15 +57,16 @@ public class DataService {
             });
         });
 
+        //TODO: Check DataPair has NetworkId
         return dataPairRepository.saveAll(dataPairList).stream().sorted().toList();
     }
 
-    public List<DataPair> retrieveAll(UUID networkId) {
-        return dataPairRepository.findByNetworkId(networkId).stream().sorted().toList();
-    }
-
-    public List<DataPair> retrieveWindowed(UUID networkId, long createdAtStart, long createdAtEnd) {
-        return dataPairRepository.findByNetworkIdAndCreatedAtBetween(networkId, createdAtStart, createdAtEnd).stream().sorted().toList();
+    @Async
+    public CompletableFuture<List<DataPair>> retrieve(UUID networkId, Long createdAtStart, Long createdAtEnd) {
+        if(createdAtStart == null || createdAtEnd == null) {
+            return CompletableFuture.completedFuture(dataPairRepository.findByNetworkId(networkId));
+        }
+        return CompletableFuture.completedFuture(dataPairRepository.findByNetworkIdAndCreatedAtBetween(networkId, createdAtStart, createdAtEnd).stream().sorted().toList());
     }
 
     public List<DataPair> cleanDatapair(UUID networkId) {
