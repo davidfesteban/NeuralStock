@@ -1,8 +1,5 @@
 package dev.misei.einfachml.neuralservice;
 
-import dev.misei.einfachml.controller.EinfachAPI;
-import dev.misei.einfachml.neuralservice.domain.Network;
-import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.neuralservice.domain.algorithm.AlgorithmType;
 import dev.misei.einfachml.neuralservice.domain.algorithm.StandardComplexity;
 import dev.misei.einfachml.neuralservice.domain.shape.StandardShape;
@@ -12,12 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 

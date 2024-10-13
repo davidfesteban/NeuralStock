@@ -87,9 +87,9 @@ public class EinfachAPITest {
         );
         Assertions.assertEquals(HttpStatus.OK, includeDataSetC.getStatusCode());
 
-        callCompute(networkA, 1000, null, null);
-        //callCompute(networkB, 4000, null, null);
-        //callCompute(networkC, 4000, null, null);
+        callCompute(networkA, 4000, null, null);
+        callCompute(networkB, 4000, null, null);
+        callCompute(networkC, 4000, null, null);
 
         // Keep the test alive for a while to let the SSE stream continue
         Thread.sleep(300000); // 30 seconds (adjust as needed)

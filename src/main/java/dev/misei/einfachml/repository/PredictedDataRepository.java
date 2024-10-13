@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Repository
 public interface PredictedDataRepository extends MongoRepository<PredictedData, UUID> {
+    long countByNetworkId(UUID networkId);
     @Async
     CompletableFuture<List<PredictedData>> findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(UUID networkId, int epochHappenedStart, int epochHappenedEnd);
     List<PredictedData> findByNetworkIdAndEpochHappenedBetween(UUID networkId, int epochHappenedStart, int epochHappenedEnd);

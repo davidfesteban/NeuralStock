@@ -1,3 +1,9 @@
+//TODO: @GetMapping("/save & upload DataSet")
+//TODO: Backup Scheduled for Networks & load
+//TODO: Clean up Network static
+//TODO: Allow Algorithm modifications
+
+
 # Backpropagation Example
 
 This document walks through the process of forward propagation, calculating the gradients of the loss function with respect to weights and biases, and updating them during backpropagation. The example includes a neural network with two hidden layers and two output neurons.

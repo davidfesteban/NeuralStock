@@ -6,9 +6,7 @@ import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +29,7 @@ public class Network extends ArrayList<Layer> {
         this.algorithm = algorithm;
         this.inboundFeeder = new ArrayList<>();
         this.outboundFeeder = new ArrayList<>();
-        this.status = new Status(networkId, false, 0, UUID.randomUUID(),0, 0);
+        this.status = new Status(networkId, false, 0, UUID.randomUUID(), 0, 0);
     }
 
     public static Network create(UUID networkId, Algorithm algorithm) {
@@ -51,52 +49,50 @@ public class Network extends ArrayList<Layer> {
     }
 
     //Avoid to have huge collections in memory
-    public void computeFlux(List<DataPair> dataset, int epochs, boolean forTraining, PredictionListener predictionListener, SseEmitter emitter) {
-        if (status.isRunning()) {
-            return;
+    public void computeFlux(List<DataPair> dataset, int epochs, PredictionListener predictionListener) {
+        status.setRunning(true);
+        try {
+            status.setTrainingId(UUID.randomUUID());
+            status.setGoalEpochs(epochs);
+
+            IntStream.range(0, epochs).forEach(value -> {
+                dataset.forEach(dataPair -> {
+                    computeForward(dataPair.getInputs());
+
+                    predictionListener.onPrediction(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
+                            outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
+
+                    computeBackward(dataPair.getExpected());
+                });
+
+                status.setCurrentEpochToGoal(value);
+                status.incrementAccEpoch();
+            });
+        } catch (Throwable e) {
+            log.error(e.getMessage());
+        } finally {
+            status.setRunning(false);
         }
 
-        status.setRunning(true);
-        status.setTrainingId(UUID.randomUUID());
-        status.setGoalEpochs(epochs);
-        System.out.println("Emitting1");
-        emit(emitter);
-
-        IntStream.range(0, epochs).forEach(value -> {
-            dataset.forEach(dataPair -> {
-                computeForward(dataPair.getInputs());
-
-                predictionListener.onPrediction(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
-                        outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
-
-                if (forTraining) {
-                    computeBackward(dataPair.getExpected());
-                }
-            });
-
-            status.setCurrentEpochToGoal(value);
-
-            //System.out.println("Emitting2");
-            //emit(emitter);
-
-            if (forTraining) {
-                status.incrementAccEpoch();
-            }
-        });
-
-        status.setRunning(false);
-        System.out.println("Emitting3");
-        emit(emitter);
     }
 
-    private void emit(SseEmitter emitter) {
+    public List<PredictedData> predictAsync(List<DataPair> dataset) {
+        status.setRunning(true);
+        List<PredictedData> predictedData = new ArrayList<>();
+
         try {
-            emitter.send(status);
-        } catch (IOException e) {
-            System.out.println("EMITTER NETWORK");
-            emitter.complete();
-            System.out.println(e.getMessage());
+            dataset.forEach(dataPair -> {
+                computeForward(dataPair.getInputs());
+                predictedData.add(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
+                        outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
+            });
+        } catch (Throwable e) {
+            log.error(e.getMessage());
+        } finally {
+            status.setRunning(false);
         }
+
+        return predictedData;
     }
 
     private void computeForward(List<Double> inputs) {
@@ -137,6 +133,7 @@ public class Network extends ArrayList<Layer> {
     }
 
     public void reconnectAll() {
+        status.setRunning(false);
         this.forEach(layer -> layer.forEach(subLayer -> subLayer.forEach(neuron -> neuron.inboundConnections.clear())));
 
         this.getFirst().connectFrom(inboundFeeder);

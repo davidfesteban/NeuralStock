@@ -8,26 +8,19 @@ import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
-//TODO: Load/Unload the Network
 @Service
 @Slf4j
 @AllArgsConstructor
 @Getter
 public class NeuralService {
-
-    private static final int SAVE_RATE = 10000;
-    private static final int BUFFER_SIZE = 10000;
     private final Map<UUID, Network> networkList = new HashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
     private final Queue<PredictedData> predictedDataCache = new ConcurrentLinkedQueue<>();
@@ -49,7 +42,6 @@ public class NeuralService {
         }
 
         networkList.remove(networkId);
-        scheduledDataSave(); //When called from the same class, it is not async
         predictedDataRepository.deleteByNetworkId(networkId);
 
         return CompletableFuture.completedFuture(network);
@@ -59,7 +51,7 @@ public class NeuralService {
     public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
         var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
         return predictedDataRepository.findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(networkId,
-                lastEpochAmount == null? 0 : totalEpochs - lastEpochAmount
+                lastEpochAmount == null ? 0 : totalEpochs - lastEpochAmount
                 , totalEpochs);
     }
 
@@ -69,21 +61,27 @@ public class NeuralService {
     }
 
     @Async
-    public void computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs,
-                                                       boolean forTraining, SseEmitter sseEmitter) {
+    public CompletableFuture<Void> computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs) {
+        Network network = networkList.get(networkId);
+
+        if (network.getStatus().isRunning()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
+        }
+
         networkList.get(networkId)
-                .computeFlux(dataset, epochs, forTraining, predictedDataCache::add, sseEmitter);
+                .computeFlux(dataset, epochs, predictedDataCache::add);
+
+        return CompletableFuture.completedFuture(null);
     }
 
     @Async
-    @Scheduled(fixedRate = SAVE_RATE)
-    void scheduledDataSave() {
+    public void scheduleDataSave(int bufferSize) {
         if (lock.tryLock()) {
             try {
                 List<PredictedData> buffer = new ArrayList<>();
                 PredictedData predictedData = new PredictedData();
 
-                while (buffer.size() <= BUFFER_SIZE && predictedData != null) {
+                while (buffer.size() <= bufferSize && predictedData != null) {
                     predictedData = predictedDataCache.poll();
                     if (predictedData != null) {
                         buffer.add(predictedData);
@@ -92,12 +90,22 @@ public class NeuralService {
 
                 log.info(String.format("Saving on database %d elements", buffer.size()));
                 predictedDataRepository.saveAll(buffer);
-                log.info("Saved on database");
             } finally {
                 lock.unlock();
             }
         } else {
             log.info("Task skipped - another instance is already running");
         }
+    }
+
+    @Async
+    public CompletableFuture<List<PredictedData>> predictElasticAsync(UUID networkId, List<DataPair> dataSet) {
+        Network network = networkList.get(networkId);
+
+        if (network.getStatus().isRunning()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
+        }
+
+        return CompletableFuture.completedFuture(network.predictAsync(dataSet));
     }
 }
