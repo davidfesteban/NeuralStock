@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.misei.einfachml.neuralservice.NeuralService;
 import dev.misei.einfachml.repository.DataPairRepository;
 import dev.misei.einfachml.repository.NetworkBoardRepository;
-import dev.misei.einfachml.repository.PredictedDataRepository;
+import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,12 +25,12 @@ import static dev.misei.einfachml.util.ResponseUtil.entityResponse;
 @RequestMapping("/api/scheduler")
 @Slf4j
 public class ScheduledAPI {
-    private static final int SAVE_RATE = 7000;
+    private static final int SAVE_RATE = 2000;
     private final NeuralService neuralService;
     private final ObjectMapper objectMapper;
     private final NetworkBoardRepository networkBoardRepository;
     private final DataPairRepository dataPairRepository;
-    private final PredictedDataRepository predictedDataRepository;
+    private final PredictedDataRepositoryPerformance predictedDataRepository;
     private int bufferSize = 100000;
 
     @GetMapping("/buffer")
@@ -59,7 +59,7 @@ public class ScheduledAPI {
     }
 
     @Async
-    @Scheduled(fixedRate = 3600 * 3)
+    @Scheduled(fixedRate = 1000 * 60 * 5)
     void saveNetwork() {
         neuralService.getNetworkList().values().forEach(network -> {
             File file = new File(String.format("static/models/network_%s.json", network.getStatus().getNetworkId()));

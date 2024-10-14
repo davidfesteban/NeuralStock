@@ -37,8 +37,7 @@ public class PlotAPI {
 
                         neuralBoard.setMseErrors(predictedData.stream()
                                 .collect(Collectors.groupingBy(PredictedData::getEpochHappened)).values().stream().map(
-                                        predictedData12 -> predictedData12.stream().mapToDouble(
-                                                        PredictedData::calculateMseForPredictedData)
+                                        predictedData12 -> predictedData12.stream().mapToDouble(PredictedData::getMseError)
                                                 .average().orElse(0d)).toList());
 
                         return neuralBoard;

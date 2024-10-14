@@ -2,7 +2,7 @@ package dev.misei.einfachml.neuralservice;
 
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.domain.Status;
-import dev.misei.einfachml.repository.PredictedDataRepository;
+import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.AllArgsConstructor;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 @Service
 @Slf4j
@@ -22,10 +22,9 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 public class NeuralService {
     private final Map<UUID, Network> networkList = new HashMap<>();
-    private final ReentrantLock lock = new ReentrantLock();
     private final Queue<PredictedData> predictedDataCache = new ConcurrentLinkedQueue<>();
 
-    private PredictedDataRepository predictedDataRepository;
+    private PredictedDataRepositoryPerformance predictedDataRepository;
 
     public UUID load(UUID uuid, Network network) {
         network.reconnectAll();
@@ -50,9 +49,17 @@ public class NeuralService {
     @Async
     public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
         var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
-        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetweenOrderByCreatedAtAsc(networkId,
-                lastEpochAmount == null ? 0 : totalEpochs - lastEpochAmount
-                , totalEpochs);
+         //???? is it good async
+        return CompletableFuture.supplyAsync(() -> {
+            if(lastEpochAmount== null) {
+                return predictedDataRepository.findAllByNetworkId(networkId);
+            }
+
+            return predictedDataRepository.findByNetworkIdAndEpochHappenedBetween(networkId,
+                    totalEpochs - lastEpochAmount
+                    , totalEpochs);
+        });
+
     }
 
     @Async
@@ -74,28 +81,24 @@ public class NeuralService {
         return CompletableFuture.completedFuture(null);
     }
 
-    @Async
+
     public void scheduleDataSave(int bufferSize) {
-        if (lock.tryLock()) {
-            try {
-                List<PredictedData> buffer = new ArrayList<>();
-                PredictedData predictedData = new PredictedData();
+        int bufferCount = 0;
+        Map<UUID, List<PredictedData>> buffer = new HashMap<>();
+        PredictedData predictedData = new PredictedData();
 
-                while (buffer.size() <= bufferSize && predictedData != null) {
-                    predictedData = predictedDataCache.poll();
-                    if (predictedData != null) {
-                        buffer.add(predictedData);
-                    }
-                }
-
-                log.info(String.format("Saving on database %d elements", buffer.size()));
-                predictedDataRepository.saveAll(buffer);
-            } finally {
-                lock.unlock();
+        while (bufferCount < bufferSize && predictedData != null) {
+            predictedData = predictedDataCache.poll();
+            if (predictedData != null) {
+                UUID networkId = predictedData.getNetworkId();
+                buffer.computeIfAbsent(networkId, k -> new ArrayList<>());
+                buffer.get(networkId).add(predictedData);
+                ++bufferCount;
             }
-        } else {
-            log.info("Task skipped - another instance is already running");
         }
+
+        log.info(String.format("Saving on database %d elements", bufferCount));
+        buffer.forEach((uuid, predictedData1) -> predictedDataRepository.saveBatchByNetworkId(uuid, predictedData1));
     }
 
     @Async

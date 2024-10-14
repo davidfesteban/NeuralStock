@@ -53,7 +53,7 @@ public class Network extends ArrayList<Layer> {
         status.setRunning(true);
         try {
             status.setTrainingId(UUID.randomUUID());
-            status.setGoalEpochs(epochs);
+            status.setGoalEpochs(epochs-1);
 
             IntStream.range(0, epochs).forEach(value -> {
                 dataset.forEach(dataPair -> {

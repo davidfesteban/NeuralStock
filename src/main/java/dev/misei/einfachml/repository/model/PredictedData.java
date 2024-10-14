@@ -1,6 +1,8 @@
 package dev.misei.einfachml.repository.model;
 
-import lombok.*;
+import lombok.Data;
+import lombok.NonNull;
+import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -9,7 +11,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Document
-@AllArgsConstructor
 @ToString
 @Data
 public class PredictedData implements Comparable<PredictedData> {
@@ -28,7 +29,31 @@ public class PredictedData implements Comparable<PredictedData> {
     private List<Double> inputs;
     private List<Double> expected;
 
-    public PredictedData(){
+    private Double mseError;
+
+    public PredictedData(UUID uuid, long createdAt, UUID networkId, int epochHappened, List<Double> predicted, List<Double> inputs, List<Double> expected) {
+        this.uuid = uuid;
+        this.createdAt = createdAt;
+        this.networkId = networkId;
+        this.epochHappened = epochHappened;
+        this.predicted = predicted;
+        this.inputs = inputs;
+        this.expected = expected;
+        this.mseError = calculateMseForPredictedData();
+    }
+
+    public PredictedData(UUID uuid, long createdAt, UUID networkId, int epochHappened, List<Double> predicted, List<Double> inputs, List<Double> expected, Double mseError) {
+        this.uuid = uuid;
+        this.createdAt = createdAt;
+        this.networkId = networkId;
+        this.epochHappened = epochHappened;
+        this.predicted = predicted;
+        this.inputs = inputs;
+        this.expected = expected;
+        this.mseError = mseError == null ? calculateMseForPredictedData() : mseError;
+    }
+
+    public PredictedData() {
         networkId = UUID.randomUUID();
     }
 
