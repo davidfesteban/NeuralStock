@@ -10,11 +10,11 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Supplier;
 
 @Service
 @Slf4j
@@ -46,20 +46,14 @@ public class NeuralService {
         return CompletableFuture.completedFuture(network);
     }
 
-    @Async
-    public CompletableFuture<List<PredictedData>> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
+    public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
         var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
-         //???? is it good async
-        return CompletableFuture.supplyAsync(() -> {
-            if(lastEpochAmount== null) {
-                return predictedDataRepository.findAllByNetworkId(networkId);
-            }
+        if (lastEpochAmount == null) {
+            return predictedDataRepository.findAllByNetworkId(networkId);
+        }
 
-            return predictedDataRepository.findByNetworkIdAndEpochHappenedBetween(networkId,
-                    totalEpochs - lastEpochAmount
-                    , totalEpochs);
-        });
-
+        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetween(networkId,
+                Math.max(0, totalEpochs - lastEpochAmount), totalEpochs);
     }
 
     @Async
@@ -97,8 +91,10 @@ public class NeuralService {
             }
         }
 
-        log.info(String.format("Saving on database %d elements", bufferCount));
-        buffer.forEach((uuid, predictedData1) -> predictedDataRepository.saveBatchByNetworkId(uuid, predictedData1));
+        if (bufferCount != 0 || !buffer.isEmpty()) {
+            log.info(String.format("Saving on database %d elements", bufferCount));
+            buffer.forEach((uuid, predictedData1) -> predictedDataRepository.saveBatchByNetworkId(uuid, predictedData1));
+        }
     }
 
     @Async

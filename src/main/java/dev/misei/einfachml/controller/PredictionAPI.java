@@ -8,6 +8,7 @@ import dev.misei.einfachml.util.ResponseUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,9 +37,7 @@ public class PredictionAPI {
     }
 
     @GetMapping("/getPredictionsWithDefinition")
-    public CompletableFuture<ResponseEntity<List<PredictedData>>> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount) {
-        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount)
-                .thenApply(ResponseEntity::ok)
-                .exceptionally(ResponseUtil::responseEntityFailed);
+    public Flux<PredictedData> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount) {
+        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount);
     }
 }

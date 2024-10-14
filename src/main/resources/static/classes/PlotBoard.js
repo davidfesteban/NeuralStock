@@ -8,7 +8,7 @@ export class PlotBoard {
 
     static fromJson(jsonObj) {
         return new PlotBoard(
-            jsonObj.lastEpochPredicted.map(item => PredictedData.fromJson(item)),
+            //jsonObj.lastEpochPredicted.map(item => PredictedData.fromJson(item)),
             jsonObj.mseErrors
         );
     }
