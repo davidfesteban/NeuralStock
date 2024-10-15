@@ -8,29 +8,14 @@ import dev.misei.einfachml.neuralservice.NeuralService;
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.repository.NetworkBoardRepository;
 import dev.misei.einfachml.repository.model.AlgorithmBoard;
-import dev.misei.einfachml.util.ResponseUtil;
+import dev.misei.einfachml.repository.model.NetworkBoard;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
+import reactor.core.publisher.Mono;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
-import static dev.misei.einfachml.util.ResponseUtil.entityResponse;
 
 @RestController
 @AllArgsConstructor
@@ -44,56 +29,48 @@ public class NetworkAPI {
     private ObjectMapper objectMapper;
 
     @PostMapping("/create")
-    public ResponseEntity<UUID> createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
-        return entityResponse(() -> {
-            var algorithm = AlgorithmBoardMapper.from(algorithmBoard);
-            Network network = Network.create(UUID.randomUUID(), algorithm);
+    public Mono<UUID> createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
+        var algorithm = AlgorithmBoardMapper.from(algorithmBoard);
 
-            UUID networkId = network.getStatus().getNetworkId();
-            networkBoardRepository.save(NetworkBoardMapper.from(networkId, AlgorithmBoardMapper.to(algorithm)));
-            return neuralService.load(networkId, network);
-        });
+        Network network = Network.create(UUID.randomUUID(), algorithm);
+        UUID networkId = network.getStatus().getNetworkId();
+
+        return networkBoardRepository.save(NetworkBoardMapper.from(networkId, AlgorithmBoardMapper.to(algorithm)))
+                .then(neuralService.load(networkId, network))
+                .thenReturn(networkId);
     }
 
     @GetMapping("/getAllNetworks")
-    public SseEmitter getAllNetworks() {
-        SseEmitter emitter = new SseEmitter();
+    public Flux<NetworkBoard> getAllNetworks() {
+        return neuralService.getAllStatus()
+                .flatMap(status -> {
+                    return networkBoardRepository.findById(status.getNetworkId())
+                            .flatMap(networkBoard -> {
+                                networkBoard.setStatus(status);
 
-        Disposable disposable = Flux.interval(Duration.ofSeconds(2))
-                .share()
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(aLong -> {
-                    try {
-                        emitter.send(networkBoardRepository.findAll());
-                    } catch (IOException e) {
-                        log.error("Get All Networks Error: " + e.getMessage());
-                        emitter.completeWithError(e);
-                    }
-                });
-
-        emitter.onCompletion(disposable::dispose);
-        emitter.onTimeout(() -> {
-            log.error("Get All Networks Timeout");
-            disposable.dispose();
-            emitter.complete();
-        });
-
-        return emitter;
+                                return dataService.countByNetworkId(networkBoard.getNetworkId())
+                                        .flatMap(datasetSize -> {
+                                            networkBoard.setDatasetSize(datasetSize);
+                                            return neuralService.countByNetworkId(networkBoard.getNetworkId())
+                                                    .map(predictionsSize -> {
+                                                        networkBoard.setPredictionsSize(predictionsSize);
+                                                        return networkBoard;
+                                                    });
+                                        });
+                            });
+                })
+                .flatMap(networkBoard -> networkBoardRepository.save(networkBoard));
     }
 
     @GetMapping("/deleteEntire")
-    public CompletableFuture<ResponseEntity<Void>> delete(@RequestParam UUID networkId) {
+    public Mono<Void> delete(@RequestParam UUID networkId) {
         return dataService.cleanDatapair(networkId)
-                .thenApply(unused -> {
-                    neuralService.delete(networkId);
-                    return null;
-                })
-                .thenApplyAsync((Function<Object, ResponseEntity<Void>>) o -> {
-                    networkBoardRepository.deleteById(networkId);
-                    return ResponseEntity.ok(null);
-                })
-                .exceptionally(ResponseUtil::responseEntityFailed);
+                .then(neuralService.delete(networkId))
+                .then(networkBoardRepository.deleteById(networkId))
+                .then();
     }
+
+    /*
 
     @PostMapping("/upload")
     public ResponseEntity<UUID> uploadJsonFile(@RequestParam("file") MultipartFile networkJsonFile) throws IOException {
@@ -156,5 +133,5 @@ public class NetworkAPI {
         } else {
             return ResponseEntity.status(404).body(null);
         }
-    }
+    } */
 }

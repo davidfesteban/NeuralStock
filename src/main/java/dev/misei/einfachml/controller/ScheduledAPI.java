@@ -2,23 +2,13 @@ package dev.misei.einfachml.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.misei.einfachml.neuralservice.NeuralService;
-import dev.misei.einfachml.repository.DataPairRepository;
-import dev.misei.einfachml.repository.NetworkBoardRepository;
-import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.io.IOException;
-
-import static dev.misei.einfachml.util.ResponseUtil.entityResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,39 +18,12 @@ public class ScheduledAPI {
     private static final int SAVE_RATE = 2000;
     private final NeuralService neuralService;
     private final ObjectMapper objectMapper;
-    private final NetworkBoardRepository networkBoardRepository;
-    private final DataPairRepository dataPairRepository;
-    private final PredictedDataRepositoryPerformance predictedDataRepository;
-    private int bufferSize = 100000;
 
-    @GetMapping("/buffer")
-    public ResponseEntity<Integer> modifyBuffer(@RequestParam Integer size) {
-        return entityResponse(() -> {
-            return bufferSize = size;
-        });
-    }
+    //ReIndex Mongo sometimes
 
-    @Async
-    @Scheduled(fixedRate = SAVE_RATE)
-    void updateNetworkBoard() {
-        neuralService.getAllStatus().thenAccept(statuses -> statuses.forEach(status -> {
-            var networkBoard = networkBoardRepository.findById(status.getNetworkId()).get();
-            networkBoard.setStatus(status);
-            networkBoard.setDatasetSize(dataPairRepository.countByNetworkId(status.getNetworkId()));
-            networkBoard.setPredictionsSize(predictedDataRepository.countByNetworkId(status.getNetworkId()));
-            networkBoardRepository.save(networkBoard);
-        }));
-    }
-
-    @Async
-    @Scheduled(fixedRate = SAVE_RATE)
-    void savePredictions() {
-        neuralService.scheduleDataSave(bufferSize);
-    }
-
-    @Async
-    @Scheduled(fixedRate = 1000 * 60 * 5)
-    void saveNetwork() {
+    //@Async
+    //@Scheduled(fixedRate = 1000 * 60 * 5)
+    void saveNetworkBackups() {
         neuralService.getNetworkList().values().forEach(network -> {
             File file = new File(String.format("static/models/network_%s.json", network.getStatus().getNetworkId()));
             try {

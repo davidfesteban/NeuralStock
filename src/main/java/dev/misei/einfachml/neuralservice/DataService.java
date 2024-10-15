@@ -5,14 +5,12 @@ import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.NetworkBoard;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Comparator;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 @AllArgsConstructor
@@ -21,59 +19,68 @@ public class DataService {
 
     private DataPairRepository dataPairRepository;
 
-    @Async
-    public void includeDataset(NetworkBoard networkBoard, List<DataPair> dataPairList) {
-        dataPairList.forEach(dataPair -> {
-
-            if (dataPair.getInputs().size() != networkBoard.getAlgorithmBoard().getInputSize() ||
-                    dataPair.getExpected().size() != networkBoard.getAlgorithmBoard().getOutputSize()) {
-                throw new IllegalArgumentException("DataPair is not consistent");
+    public Mono<Void> includeDataset(NetworkBoard networkBoard, Flux<DataPair> dataPairList) {
+        return dataPairList.flatMapSequential(dataPair -> {
+            // Check if inputs are null
+            if (dataPair.getInputs() == null) {
+                return Mono.error(new IllegalArgumentException("DataPair inputs cannot be null"));
             }
 
-            dataPair.getInputs().forEach(aDouble -> {
-                if (aDouble == null) {
-                    throw new IllegalArgumentException("DataPair has null values");
+            // Validate the input size
+            if (dataPair.getInputs().size() != networkBoard.getAlgorithmBoard().getInputSize()) {
+                return Mono.error(new IllegalArgumentException("DataPair input size is not consistent"));
+            }
+
+            // Validate the expected size
+            if (dataPair.getExpected().size() != networkBoard.getAlgorithmBoard().getOutputSize()) {
+                return Mono.error(new IllegalArgumentException("DataPair expected size is not consistent"));
+            }
+
+            dataPair.getInputs().forEach(input -> {
+                if (input == null) {
+                    throw new IllegalArgumentException("DataPair has null values in inputs");
                 }
             });
 
-            dataPair.getExpected().forEach(aDouble -> {
-                if (aDouble == null) {
-                    throw new IllegalArgumentException("DataPair has null values");
+            dataPair.getExpected().forEach(output -> {
+                if (output == null) {
+                    throw new IllegalArgumentException("DataPair has null values in expected");
                 }
             });
 
             dataPair.setNetworkId(networkBoard.getNetworkId());
-        });
 
-        log.info(String.format("Including DataSet for %s", networkBoard.getNetworkId()));
-        dataPairRepository.saveAll(dataPairList);
+            return Mono.just(dataPair);
+        }).as(dataPairFlux -> dataPairRepository.saveAll(dataPairFlux)).then();
     }
 
-    @Async
-    public CompletableFuture<List<DataPair>> retrieve(UUID networkId, Long createdAtStart, Long createdAtEnd, Integer lastAmount) {
-        if(createdAtStart == null || createdAtEnd == null) {
-            return CompletableFuture.completedFuture(dataPairRepository.findByNetworkId(networkId));
+    public Flux<DataPair> retrieve(UUID networkId, Long createdAtStart, Long createdAtEnd, Integer lastAmount) {
+        if (createdAtStart == null || createdAtEnd == null) {
+            return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId);
         } else if (lastAmount != null) {
-            //TODO
+            return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId)
+                    .sort(Comparator.comparing(DataPair::getCreatedAt).reversed()) //DESC
+                    .take(lastAmount)
+                    .sort(Comparator.comparing(DataPair::getCreatedAt)); //ASC
         }
-        return CompletableFuture.completedFuture(dataPairRepository.findByNetworkIdAndCreatedAtBetween(networkId, createdAtStart, createdAtEnd).stream().sorted().toList());
+        return dataPairRepository.findByNetworkIdAndCreatedAtBetweenOrderByCreatedAtAsc(networkId, createdAtStart, createdAtEnd);
     }
 
-    @Async
-    public CompletableFuture<Void> cleanDatapair(UUID networkId) {
-        dataPairRepository.deleteByNetworkId(networkId);
-        return null;
+    public Mono<Void> cleanDatapair(UUID networkId) {
+        return dataPairRepository.deleteByNetworkId(networkId).then();
     }
 
-    @Async
-    public void deleteDataSet(List<UUID> dataSetUUID) {
-        dataSetUUID.forEach(uuid -> dataPairRepository.deleteById(uuid));
+    public Mono<Void> deleteDataSet(Flux<UUID> dataSetUUID) {
+        return dataSetUUID
+                .flatMap(dataPairRepository::deleteById)  // Reactive delete for each UUID
+                .then();
     }
 
-    @Async
-    public CompletableFuture<List<DataPair>> retrieveByPage(UUID networkId, Integer page) {
-        //TODO
-        return CompletableFuture.completedFuture(Collections.emptyList());
+    public Flux<DataPair> retrieveByPage(UUID networkId) {
+        return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId);
     }
 
+    public Mono<Long> countByNetworkId(UUID networkId) {
+        return dataPairRepository.countByNetworkId(networkId);
+    }
 }

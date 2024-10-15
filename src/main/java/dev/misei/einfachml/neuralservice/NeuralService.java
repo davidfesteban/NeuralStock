@@ -1,5 +1,6 @@
 package dev.misei.einfachml.neuralservice;
 
+import com.mongodb.client.MongoIterable;
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.domain.Status;
 import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -22,28 +24,27 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Getter
 public class NeuralService {
     private final Map<UUID, Network> networkList = new HashMap<>();
-    private final Queue<PredictedData> predictedDataCache = new ConcurrentLinkedQueue<>();
 
     private PredictedDataRepositoryPerformance predictedDataRepository;
 
-    public UUID load(UUID uuid, Network network) {
-        network.reconnectAll();
-        networkList.put(uuid, network);
-        return uuid;
+    public Mono<UUID> load(UUID uuid, Network network) {
+        return Mono.defer(() -> {
+            network.reconnectAll();
+            networkList.put(uuid, network);
+            return Mono.just(uuid);
+        });
     }
 
-    @Async
-    public CompletableFuture<Network> delete(UUID networkId) {
+    public Mono<Void> delete(UUID networkId) {
         Network network = networkList.get(networkId);
 
         if (network.getStatus().isRunning()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
+            return Mono.error(new IllegalStateException("Network still running"));
         }
 
-        networkList.remove(networkId);
-        predictedDataRepository.deleteByNetworkId(networkId);
-
-        return CompletableFuture.completedFuture(network);
+        return predictedDataRepository.deleteByNetworkId(networkId)
+                .then(Mono.fromRunnable(() -> networkList.remove(networkId)))
+                .then();
     }
 
     public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
@@ -56,55 +57,32 @@ public class NeuralService {
                 Math.max(0, totalEpochs - lastEpochAmount), totalEpochs);
     }
 
-    @Async
-    public CompletableFuture<List<Status>> getAllStatus() {
-        return CompletableFuture.completedFuture(networkList.values().stream().map(Network::getStatus).toList());
+    public Flux<Status> getAllStatus() {
+        return Flux.fromStream(networkList.values().stream().map(Network::getStatus));
     }
 
-    @Async
-    public CompletableFuture<Void> computeElasticAsync(UUID networkId, List<DataPair> dataset, int epochs) {
+    public Mono<Void> computeElasticAsync(UUID networkId, Flux<DataPair> dataset, int epochs) {
         Network network = networkList.get(networkId);
-
         if (network.getStatus().isRunning()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
+            return Mono.error(new IllegalStateException("Network still running"));
         }
 
-        networkList.get(networkId)
-                .computeFlux(dataset, epochs, predictedDataCache::add);
-
-        return CompletableFuture.completedFuture(null);
+        return network.computeFlux(dataset, epochs)
+                .buffer(1000)
+                .flatMapSequential(batch -> predictedDataRepository.saveBatchByNetworkId(networkId, Flux.fromIterable(batch)))
+                .then();
     }
 
-
-    public void scheduleDataSave(int bufferSize) {
-        int bufferCount = 0;
-        Map<UUID, List<PredictedData>> buffer = new HashMap<>();
-        PredictedData predictedData = new PredictedData();
-
-        while (bufferCount < bufferSize && predictedData != null) {
-            predictedData = predictedDataCache.poll();
-            if (predictedData != null) {
-                UUID networkId = predictedData.getNetworkId();
-                buffer.computeIfAbsent(networkId, k -> new ArrayList<>());
-                buffer.get(networkId).add(predictedData);
-                ++bufferCount;
-            }
-        }
-
-        if (bufferCount != 0 || !buffer.isEmpty()) {
-            log.info(String.format("Saving on database %d elements", bufferCount));
-            buffer.forEach((uuid, predictedData1) -> predictedDataRepository.saveBatchByNetworkId(uuid, predictedData1));
-        }
-    }
-
-    @Async
-    public CompletableFuture<List<PredictedData>> predictElasticAsync(UUID networkId, List<DataPair> dataSet) {
+    public Flux<PredictedData> predictElasticAsync(UUID networkId, List<DataPair> dataSet) {
         Network network = networkList.get(networkId);
-
         if (network.getStatus().isRunning()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Network still running"));
+            return Flux.error(new IllegalStateException("Network still running"));
         }
 
-        return CompletableFuture.completedFuture(network.predictAsync(dataSet));
+        return network.predictAsync(dataSet);
+    }
+
+    public Mono<Long> countByNetworkId(UUID networkId) {
+        return predictedDataRepository.countByNetworkId(networkId);
     }
 }

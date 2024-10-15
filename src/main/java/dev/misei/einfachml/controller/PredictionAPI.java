@@ -6,13 +6,16 @@ import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import dev.misei.einfachml.util.ResponseUtil;
 import lombok.AllArgsConstructor;
+import org.reactivestreams.Publisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 @RestController
 @AllArgsConstructor
@@ -23,17 +26,15 @@ public class PredictionAPI {
     private NeuralService neuralService;
 
     @GetMapping("/compute")
-    public CompletableFuture<Void> compute(@RequestParam UUID networkId, @RequestParam int epochs, @RequestParam(required = false) Long createdAtStart,
-                                           @RequestParam(required = false) Long createdAtEnd, @RequestParam(required = false) Integer lastAmount) {
+    public Mono<Void> compute(@RequestParam UUID networkId, @RequestParam int epochs, @RequestParam(required = false) Long createdAtStart,
+                              @RequestParam(required = false) Long createdAtEnd, @RequestParam(required = false) Integer lastAmount) {
         return dataService.retrieve(networkId, createdAtStart, createdAtEnd, lastAmount)
-                .thenAccept(dataPairList -> neuralService.computeElasticAsync(networkId, dataPairList, epochs));
+                .as(dataPairList -> neuralService.computeElasticAsync(networkId, dataPairList, epochs));
     }
 
     @PostMapping("/predict")
-    public CompletableFuture<ResponseEntity<List<PredictedData>>> predict(@RequestParam UUID networkId, @RequestBody List<DataPair> dataSet) {
-        return neuralService.predictElasticAsync(networkId, dataSet)
-                .thenApply(ResponseEntity::ok)
-                .exceptionally(ResponseUtil::responseEntityFailed);
+    public Flux<PredictedData> predict(@RequestParam UUID networkId, @RequestBody List<DataPair> dataSet) {
+        return neuralService.predictElasticAsync(networkId, dataSet);
     }
 
     @GetMapping("/getPredictionsWithDefinition")

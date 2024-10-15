@@ -6,11 +6,15 @@ import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 //TODO: Refactor antipattern
@@ -49,50 +53,52 @@ public class Network extends ArrayList<Layer> {
     }
 
     //Avoid to have huge collections in memory
-    public void computeFlux(List<DataPair> dataset, int epochs, PredictionListener predictionListener) {
-        status.setRunning(true);
-        try {
-            status.setTrainingId(UUID.randomUUID());
-            status.setGoalEpochs(epochs-1);
-
-            IntStream.range(0, epochs).forEach(value -> {
-                dataset.forEach(dataPair -> {
-                    computeForward(dataPair.getInputs());
-
-                    predictionListener.onPrediction(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
-                            outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
-
-                    computeBackward(dataPair.getExpected());
-                });
-
-                status.setCurrentEpochToGoal(value);
-                status.incrementAccEpoch();
-            });
-        } catch (Throwable e) {
-            log.error(e.getMessage());
-        } finally {
-            status.setRunning(false);
-        }
-
+    public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs) {
+        return Flux.range(0, epochs)
+                .doOnNext(epoch -> {
+                    status.setCurrentEpochToGoal(epoch);
+                    status.incrementAccEpoch();
+                })
+                .flatMap(epoch -> dataset
+                        .map(dataPair -> {
+                            computeForward(dataPair.getInputs());
+                            PredictedData predictedData = new PredictedData(
+                                    UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
+                                    status.getAccumulatedEpochs(), outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                                    dataPair.getInputs(), dataPair.getExpected());
+                            computeBackward(dataPair.getExpected());
+                            return predictedData;
+                        })
+                )
+                .doOnSubscribe(subscription -> {
+                    status.setRunning(true);
+                    status.setTrainingId(UUID.randomUUID());
+                    status.setGoalEpochs(epochs);
+                })
+                .doOnTerminate(() -> status.setRunning(false));
     }
 
-    public List<PredictedData> predictAsync(List<DataPair> dataset) {
-        status.setRunning(true);
-        List<PredictedData> predictedData = new ArrayList<>();
-
-        try {
-            dataset.forEach(dataPair -> {
-                computeForward(dataPair.getInputs());
-                predictedData.add(new PredictedData(UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(), status.getAccumulatedEpochs(),
-                        outboundFeeder.stream().map(connection -> connection.parentActivation).toList(), dataPair.getInputs(), dataPair.getExpected()));
-            });
-        } catch (Throwable e) {
-            log.error(e.getMessage());
-        } finally {
-            status.setRunning(false);
-        }
-
-        return predictedData;
+    public Flux<PredictedData> predictAsync(List<DataPair> dataset) {
+        return Flux.fromIterable(dataset)
+                .flatMapSequential(dataPair -> {
+                    computeForward(dataPair.getInputs());
+                    PredictedData predictedData = new PredictedData(
+                            UUID.randomUUID(),
+                            Instant.now().toEpochMilli(),
+                            dataPair.getNetworkId(),
+                            status.getAccumulatedEpochs(),
+                            outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                            dataPair.getInputs(),
+                            dataPair.getExpected()
+                    );
+                    return Mono.just(predictedData);
+                })
+                .doOnSubscribe(subscription -> {
+                    status.setRunning(true);
+                })
+                .doOnTerminate(() -> {
+                    status.setRunning(false);
+                });
     }
 
     private void computeForward(List<Double> inputs) {
