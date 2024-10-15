@@ -15,40 +15,45 @@ customElements.define('plotly-neural-shape', PlotlyShape);
 //Main States
 export const apiClient = new ApiClient("http://localhost:8080");
 let currentBoardId;
-let networkBoards;
+let networkBoardMap = new Map();
+
+//PredictionsOboe
+let previousOboeNetworkId;
+let predicitonOboeIsOnGoing;
+let predicitionOboe;
 
 //Window Register
-window.onload = function () {
-    apiClient.getAllNetworksSSE(networkBoardList => {
-        console.log("Received event: ", networkBoardList);
-
-        networkBoards = networkBoardList;
-        const dropdown = document.getElementById("network-uuid-list");
-        dropdown.innerHTML = '';
-
-        networkBoards.forEach(networkBoard => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-
-            a.classList.add('dropdown-item');
-            a.href = '#';
-            a.textContent = networkBoard.networkId;
-
-            if (currentBoardId === networkBoard.networkId) {
+window.onload = async function () {
+    setInterval(() => {
+        apiClient.getAllNetworks(networkBoard => {
+            networkBoardMap.set(networkBoard.networkId, networkBoard);
+            if(currentBoardId === networkBoard.networkId) {
                 extractCardsDOM(networkBoard);
                 extractPlotBoard(networkBoard);
             }
+        }).then(() => {
+            const dropdown = document.getElementById("network-uuid-list");
+            dropdown.innerHTML = '';
 
-            a.addEventListener('click', () => {
-                currentBoardId = networkBoard.networkId;
-                extractCardsDOM(networkBoard);
-                extractPlotBoard(networkBoard);
-            });
+            for (let networkId of networkBoardMap.keys()) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
 
-            li.appendChild(a);
-            dropdown.appendChild(li);
-        });
-    })
+                a.classList.add('dropdown-item');
+                a.href = '#';
+                a.textContent = networkId;
+
+                a.addEventListener('click', () => {
+                    currentBoardId = networkId;
+                    extractCardsDOM(networkBoardMap.get(networkId));
+                    extractPlotBoard(networkBoardMap.get(networkId));
+                });
+
+                li.appendChild(a);
+                dropdown.appendChild(li);
+            }
+        })
+    }, 5000);
 };
 
 function extractCardsDOM(networkBoard) {
@@ -56,7 +61,7 @@ function extractCardsDOM(networkBoard) {
         title: "Network Status",
         summary: [["Network Id", networkBoard.networkId], ["Total Epochs", networkBoard.status.accumulatedEpochs],
             ["DataSet Size", networkBoard.datasetSize], ["Predictions Size", networkBoard.predictionsSize],
-            ["Input Size", networkBoard.inputSize], ["Output Size", networkBoard.outputSize]]
+            ["Input Size", networkBoard.algorithmBoard.inputSize], ["Output Size", networkBoard.algorithmBoard.outputSize]]
     }, {
         title: "Training Metrics",
         summary: [["Status", networkBoard.status.running], ["Epoch Goal", networkBoard.status.goalEpochs],
@@ -72,28 +77,47 @@ function extractCardsDOM(networkBoard) {
     cardContainer.innerText = '';
 
     summaries.forEach(summary => {
-        const summaryCard = document.createElement('summary-card');
-        summaryCard.setAttribute('title', summary.title);
-        summaryCard.setAttribute('data', summary.summary);
-
-        // Append the summary card to the container
+        const summaryCard = new SummaryCard(summary.title, summary.summary);
         cardContainer.appendChild(summaryCard);
+        //summaryCard.update(summary.title, summary.summary)
     });
 
+    //cardContainer.render();
 }
 
-async function extractPlotBoard(networBoard) {
+async function extractPlotBoard(networkBoard) {
     const mseError = document.querySelector('plotly-mse-errors');
     const scatterEP = document.querySelector('plotly-scatter-expected-predicted');
     const mseErrorLast = document.querySelector('plotly-mse-error-last');
     const neuralShape = document.querySelector('plotly-neural-shape');
 
-    neuralShape.update(networBoard);
+    neuralShape.update(networkBoard);
 
-    mseError.update(networBoard)
-        .then(plotBoard => {
-          scatterEP.update(plotBoard);
-          mseErrorLast.update(plotBoard);
-        })
+    if(predicitonOboeIsOnGoing && previousOboeNetworkId === networkBoard.networkId) {
+        console.log("Not refreshing plot");
+        return;
+    } else if(predicitonOboeIsOnGoing && !previousOboeNetworkId === networkBoard.networkId) {
+        await predicitionOboe.abort();
+        console.log("Stopping because new refreshing plot");
+        predicitonOboeIsOnGoing = false;
+        previousOboeNetworkId = networkBoard.networkId;
+    } else if(previousOboeNetworkId === undefined || !previousOboeNetworkId === networkBoard.networkId) {
+        console.log("Reassigning network id");
+        previousOboeNetworkId = networkBoard.networkId;
+    }
 
+    console.log("Refreshing plot");
+    mseError.prepare();
+    //scatterEP.prepare();
+    //mseErrorLast.prepare();
+    predicitonOboeIsOnGoing = true;
+    predicitionOboe = apiClient.getPredictions(networkBoard.networkId, null, true,() => {
+        predicitonOboeIsOnGoing = true;
+    }, singlePrediction => {
+        mseError.update(singlePrediction);
+        //scatterEP.update(singlePrediction);
+        //mseErrorLast.update(singlePrediction);
+    }, () => {
+        predicitonOboeIsOnGoing = false;
+    });
 }

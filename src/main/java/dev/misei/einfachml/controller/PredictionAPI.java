@@ -6,6 +6,7 @@ import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import dev.misei.einfachml.util.ResponseUtil;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.function.Function;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/prediction")
+@Slf4j
 public class PredictionAPI {
 
     private DataService dataService;
@@ -38,7 +40,9 @@ public class PredictionAPI {
     }
 
     @GetMapping("/getPredictionsWithDefinition")
-    public Flux<PredictedData> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount) {
-        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount);
+    public Flux<PredictedData> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount,
+                                              @RequestParam(required = false) Boolean downsample) {
+        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount, downsample);
+                //.doOnNext(predictedData -> log.info("Fetched predicted data: " + predictedData));
     }
 }

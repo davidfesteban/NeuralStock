@@ -76,7 +76,7 @@ public class DataService {
                 .then();
     }
 
-    public Flux<DataPair> retrieveByPage(UUID networkId) {
+    public Flux<DataPair> retrieveAll(UUID networkId) {
         return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId);
     }
 

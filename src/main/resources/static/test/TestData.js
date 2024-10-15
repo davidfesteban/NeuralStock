@@ -4,9 +4,9 @@ import {DataPair} from "../classes/DataPair.js";
 
 //TODO: Complexity, and enum Types in JS
 export class TestData {
-    static networksUUID = [];
+    networksUUID = [];
 
-    static createDatasetSum(networkId) {
+    createDatasetSum(networkId) {
         const datapairs = [];
 
         for (let x = 0; x < 5; x++) {
@@ -29,32 +29,34 @@ export class TestData {
         return datapairs;  // Return the list of datapairs
     }
 
-    static async createTestData() {
-        let networkA = await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
-            false, "LEAKY_RELU", "PERCEPTRON", null))
-
-        let networkB = await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
-            true, "LEAKY_RELU", "PERCEPTRON", null))
-
-        let networkC = await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
-            false, "LEAKY_RELU", "PERCEPTRON", null))
-
-        let networkD = await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
-            true, "LEAKY_RELU", "PERCEPTRON", null))
-
-        apiClient.includeDataSet(networkA, this.createDatasetSum(networkA));
-        apiClient.includeDataSet(networkB, this.createDatasetSum(networkB));
-        apiClient.includeDataSet(networkC, this.createDatasetSum(networkC));
-        apiClient.includeDataSet(networkD, this.createDatasetSum(networkD));
-
-        this.networksUUID.push(networkA, networkB, networkC, networkD);
+    async createTestData() {
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
+            false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+            apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
+        });
+        //await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+        //    false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+        //    this.networksUUID.push(uuid.uuid)
+        //    apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
+        //})
+        //await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
+        //    true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+        //    this.networksUUID.push(uuid.uuid)
+        //    apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
+        //})
+        //await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+        //    true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+        //    this.networksUUID.push(uuid.uuid)
+        //    apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
+        //})
     }
 
-    static async compute(epoch) {
+    async compute(epoch) {
         this.networksUUID.forEach(uuid => apiClient.compute(uuid, epoch));
     }
 
 }
 
 // Make it globally accessible
-window.TestData = TestData;
+window.TestData = new TestData();

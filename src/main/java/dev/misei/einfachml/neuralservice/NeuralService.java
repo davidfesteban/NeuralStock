@@ -47,14 +47,36 @@ public class NeuralService {
                 .then();
     }
 
-    public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount) {
+    public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount, Boolean downsample) {
         var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
+        Flux<PredictedData> flux;
         if (lastEpochAmount == null) {
-            return predictedDataRepository.findAllByNetworkId(networkId);
+            flux = predictedDataRepository.findAllByNetworkId(networkId);
+        } else {
+            flux = predictedDataRepository.findByNetworkIdAndEpochHappenedBetween(networkId,
+                    Math.max(0, totalEpochs - lastEpochAmount), totalEpochs);
         }
 
-        return predictedDataRepository.findByNetworkIdAndEpochHappenedBetween(networkId,
-                Math.max(0, totalEpochs - lastEpochAmount), totalEpochs);
+        if(downsample == null || !downsample) {
+            return flux;
+        }
+
+        return flux.count()
+                .flatMapMany(totalCount -> {
+
+                    int bufferSize = (int) Math.floor((double) totalCount / 100);
+                    return flux
+                            .buffer(bufferSize)
+                            .flatMap(batch -> {
+                                PredictedData maxValue = batch.stream()
+                                        .max(Comparator.comparingDouble(PredictedData::getMseError))
+                                        .orElse(null);
+
+                                return maxValue != null ? Flux.just(maxValue) : Flux.empty();
+                            });
+                });
+
+
     }
 
     public Flux<Status> getAllStatus() {
@@ -68,7 +90,7 @@ public class NeuralService {
         }
 
         return network.computeFlux(dataset, epochs)
-                .buffer(1000)
+                .buffer(4000)
                 .flatMapSequential(batch -> predictedDataRepository.saveBatchByNetworkId(networkId, Flux.fromIterable(batch)))
                 .then();
     }

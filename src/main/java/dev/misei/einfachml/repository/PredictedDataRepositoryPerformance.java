@@ -12,4 +12,5 @@ public interface PredictedDataRepositoryPerformance {
     Flux<PredictedData> findAllByNetworkId(UUID networkId);
     Mono<Long> countByNetworkId(UUID networkId);
     Mono<Void> deleteByNetworkId(UUID networkId);
+    Mono<Void> deleteAll();
 }

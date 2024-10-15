@@ -29,7 +29,7 @@ public class NetworkAPI {
     private ObjectMapper objectMapper;
 
     @PostMapping("/create")
-    public Mono<UUID> createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
+    public Mono<UUIDResponse> createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
         var algorithm = AlgorithmBoardMapper.from(algorithmBoard);
 
         Network network = Network.create(UUID.randomUUID(), algorithm);
@@ -37,10 +37,10 @@ public class NetworkAPI {
 
         return networkBoardRepository.save(NetworkBoardMapper.from(networkId, AlgorithmBoardMapper.to(algorithm)))
                 .then(neuralService.load(networkId, network))
-                .thenReturn(networkId);
+                .thenReturn(new UUIDResponse(networkId));
     }
 
-    @GetMapping("/getAllNetworks")
+    @GetMapping("/getAll")
     public Flux<NetworkBoard> getAllNetworks() {
         return neuralService.getAllStatus()
                 .flatMap(status -> {

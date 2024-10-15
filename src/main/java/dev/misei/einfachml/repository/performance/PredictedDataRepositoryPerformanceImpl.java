@@ -3,6 +3,8 @@ package dev.misei.einfachml.repository.performance;
 import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -12,9 +14,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
+import java.util.function.Function;
 
 @Repository
 @AllArgsConstructor
+@Slf4j
 public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepositoryPerformance {
 
     private ReactiveMongoTemplate mongoTemplate;
@@ -46,5 +50,10 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
     @Override
     public Mono<Void> deleteByNetworkId(UUID networkId) {
         return mongoTemplate.dropCollection(networkId.toString());
+    }
+
+    @Override
+    public Mono<Void> deleteAll() {
+        return mongoTemplate.getCollectionNames().flatMap((Function<String, Publisher<?>>) s -> mongoTemplate.dropCollection(s)).then();
     }
 }

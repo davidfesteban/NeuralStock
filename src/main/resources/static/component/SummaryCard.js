@@ -1,32 +1,26 @@
 
 export class SummaryCard extends HTMLElement {
-    static get observedAttributes() {
-        return ['title'];
-    }
 
-    constructor() {
+    constructor(title, data) {
         super();
-        this.attachShadow({ mode: 'open' });  // Attach Shadow DOM
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (name === 'title' || name === 'data') {
-            this.render();
-        }
+        this.attachShadow({ mode: 'open' });
+        this.title = title;
+        this.data = data;
     }
 
     // Render method to update the Shadow DOM with the new HTML
     render() {
         // Get the title attribute or use default
-        const title = this.getAttribute('title') || 'Network Magic';
+        const title = this.title || 'Network Magic';
         const listOfPairs = [
             ["key1", "14"],
             ["key2", "15"],
             ["key3", "16"]
         ];
-        const data = this.getAttribute('data') || listOfPairs;
+        const data = this.data || listOfPairs;
         let listItems = '';
-        listOfPairs.forEach(pair => {
+
+        data.forEach(pair => {
             listItems += `
         <li class="list-group-item d-flex justify-content-between align-items-start">
             <div class="ms-2 me-auto">
@@ -44,7 +38,7 @@ export class SummaryCard extends HTMLElement {
             </style>
             <div class="card" style="width: 18rem;">
                 <div class="card-header">
-                    ${title}  <!-- Dynamic Title -->
+                    ${title}
                 </div>
                 <ul class="list-group list-group-flush">
                     ${listItems}

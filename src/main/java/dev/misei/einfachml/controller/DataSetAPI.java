@@ -3,24 +3,19 @@ package dev.misei.einfachml.controller;
 import dev.misei.einfachml.neuralservice.DataService;
 import dev.misei.einfachml.repository.NetworkBoardRepository;
 import dev.misei.einfachml.repository.model.DataPair;
-import dev.misei.einfachml.repository.model.NetworkBoard;
-import dev.misei.einfachml.util.ResponseUtil;
 import lombok.AllArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
-import static dev.misei.einfachml.util.ResponseUtil.entityResponse;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/dataset")
+@Slf4j
 public class DataSetAPI {
 
     private DataService dataService;
@@ -40,7 +35,7 @@ public class DataSetAPI {
 
     @GetMapping("/getAll")
     public Flux<DataPair> getAll(@RequestParam UUID networkId) {
-        return dataService.retrieveByPage(networkId);
+        return dataService.retrieveAll(networkId);
     }
 
 }

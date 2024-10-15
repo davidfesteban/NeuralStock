@@ -59,7 +59,7 @@ public class Network extends ArrayList<Layer> {
                     status.setCurrentEpochToGoal(epoch);
                     status.incrementAccEpoch();
                 })
-                .flatMap(epoch -> dataset
+                .flatMapSequential(epoch -> dataset
                         .map(dataPair -> {
                             computeForward(dataPair.getInputs());
                             PredictedData predictedData = new PredictedData(
