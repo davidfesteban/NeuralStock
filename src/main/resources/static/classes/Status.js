@@ -18,4 +18,19 @@ export class Status {
             jsonObj.currentEpochToGoal
         );
     }
+
+    equals(other) {
+        if (!(other instanceof Status)) {
+            return false;
+        }
+
+        return (
+            this.networkId === other.networkId &&
+            this.running === other.running &&
+            this.accumulatedEpochs === other.accumulatedEpochs &&
+            this.trainingId === other.trainingId &&
+            this.goalEpochs === other.goalEpochs &&
+            this.currentEpochToGoal === other.currentEpochToGoal
+        );
+    }
 }

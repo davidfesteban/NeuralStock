@@ -19,4 +19,18 @@ export class NetworkBoard {
             jsonObj.predictionsSize
         );
     }
+
+    equals(other) {
+        if (!(other instanceof NetworkBoard)) {
+            return false;
+        }
+
+        return (
+            this.networkId === other.networkId &&
+            this.algorithmBoard.equals(other.algorithmBoard) &&
+            this.status.equals(other.status) &&
+            this.datasetSize === other.datasetSize &&
+            this.predictionsSize === other.predictionsSize
+        );
+    }
 }

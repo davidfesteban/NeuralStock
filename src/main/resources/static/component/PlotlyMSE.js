@@ -12,9 +12,9 @@ export class PlotlyMSE extends HTMLElement {
         this.dataPairList = [];
     }
 
-    async update(partialPredictions) {
+    async update(singlePrediction) {
         //const parsedPredictions = partialPredictions.map(predictionJsonObj => PredictedData.fromJson(predictionJsonObj));
-        this.dataPairList.push(partialPredictions);
+        this.dataPairList.push(singlePrediction);
 
         // Step 1: Group by epochHappened (Map<epochHappened, List<DataPair>>)
         const groupedByEpoch = this.dataPairList.reduce((acc, item) => {
@@ -43,7 +43,7 @@ export class PlotlyMSE extends HTMLElement {
             return average;
         });
 
-        console.log(collectionOfAverages);
+        //console.log(collectionOfAverages);
 
         // Call render with the collection of averages
         this.render(collectionOfAverages);
@@ -51,15 +51,7 @@ export class PlotlyMSE extends HTMLElement {
 
     // Render method to update the Shadow DOM with the new HTML
     render(doubleList) {
-        this.shadowRoot.innerHTML = `
-            <style>
-                @import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css');
-            </style>
-            <div id="plotly"></div>
-        `;
-
-
-        const mseErrorElement = this.shadowRoot.getElementById('plotly');
+        // Prepare data for the Plotly chart
         const mseData = [{
             x: [...Array(doubleList.length).keys()],
             y: doubleList,
@@ -72,17 +64,29 @@ export class PlotlyMSE extends HTMLElement {
             xaxis: { title: 'Epoch' },
             yaxis: { title: 'MSE Error' },
             xref: 'paper',
-            autosize: true,  // Automatically resize to fill container
+            autosize: true,
             margin: {
-                l: 0,  // No left margin
-                r: 0,  // No right margin
-                t: 0,  // No top margin
-                b: 0,  // No bottom margin
-                pad: 0 // No padding
+                l: 0,
+                r: 0,
+                t: 0,
+                b: 0,
+                pad: 0
             }
         };
 
-        Plotly.newPlot(mseErrorElement, mseData, mseLayout);
+        // Use Plotly.react to update the chart efficiently
+        if (!this.mseErrorElement) {
+            this.shadowRoot.innerHTML = `
+            <style>
+                @import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css');
+            </style>
+            <div id="plotly"></div>
+        `;
+            this.mseErrorElement = this.shadowRoot.getElementById('plotly');
+            Plotly.newPlot(this.mseErrorElement, mseData, mseLayout);
+        } else {
+            Plotly.react(this.mseErrorElement, mseData, mseLayout);
+        }
     }
 
     connectedCallback() {

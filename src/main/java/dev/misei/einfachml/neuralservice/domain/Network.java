@@ -1,12 +1,10 @@
 package dev.misei.einfachml.neuralservice.domain;
 
-import dev.misei.einfachml.neuralservice.PredictionListener;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -14,7 +12,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 //TODO: Refactor antipattern
@@ -55,21 +52,19 @@ public class Network extends ArrayList<Layer> {
     //Avoid to have huge collections in memory
     public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs) {
         return Flux.range(0, epochs)
-                .doOnNext(epoch -> {
+                .flatMapSequential(epoch -> {
                     status.setCurrentEpochToGoal(epoch);
                     status.incrementAccEpoch();
+                    return dataset.map(dataPair -> {
+                        computeForward(dataPair.getInputs());
+                        PredictedData predictedData = new PredictedData(
+                                UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
+                                status.getAccumulatedEpochs() - 1, outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                                dataPair.getInputs(), dataPair.getExpected());
+                        computeBackward(dataPair.getExpected());
+                        return predictedData;
+                    });
                 })
-                .flatMapSequential(epoch -> dataset
-                        .map(dataPair -> {
-                            computeForward(dataPair.getInputs());
-                            PredictedData predictedData = new PredictedData(
-                                    UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
-                                    status.getAccumulatedEpochs(), outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
-                                    dataPair.getInputs(), dataPair.getExpected());
-                            computeBackward(dataPair.getExpected());
-                            return predictedData;
-                        })
-                )
                 .doOnSubscribe(subscription -> {
                     status.setRunning(true);
                     status.setTrainingId(UUID.randomUUID());

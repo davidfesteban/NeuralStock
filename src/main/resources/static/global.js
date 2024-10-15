@@ -22,6 +22,9 @@ let previousOboeNetworkId;
 let predicitonOboeIsOnGoing;
 let predicitionOboe;
 
+//PreviousBoard
+let previousBoard;
+
 //Window Register
 window.onload = async function () {
     setInterval(() => {
@@ -57,32 +60,33 @@ window.onload = async function () {
 };
 
 function extractCardsDOM(networkBoard) {
-    let summaries = [{
-        title: "Network Status",
-        summary: [["Network Id", networkBoard.networkId], ["Total Epochs", networkBoard.status.accumulatedEpochs],
-            ["DataSet Size", networkBoard.datasetSize], ["Predictions Size", networkBoard.predictionsSize],
-            ["Input Size", networkBoard.algorithmBoard.inputSize], ["Output Size", networkBoard.algorithmBoard.outputSize]]
-    }, {
-        title: "Training Metrics",
-        summary: [["Status", networkBoard.status.running], ["Epoch Goal", networkBoard.status.goalEpochs],
-            ["Current Epoch", networkBoard.status.currentEpochToGoal], ["Training Id", networkBoard.status.trainingId]]
-    }, {
-        title: "Algorithm Board",
-        summary: [["Learning Ratio", networkBoard.algorithmBoard.learningRatio], ["Complexity", networkBoard.algorithmBoard.complexity],
-            ["Tridimensional", networkBoard.algorithmBoard.tridimensional], ["Algorithm Type", networkBoard.algorithmBoard.algorithmType],
-            ["Shape", networkBoard.algorithmBoard.shape]]
-    }];
+    if(previousBoard == null || (!previousBoard.equals(networkBoard))) {
+        //TODO: Refactor to ViewModel with bindings
+        previousBoard = networkBoard;
+        let summaries = [{
+            title: "Network Status",
+            summary: [["Network Id", networkBoard.networkId], ["Total Epochs", networkBoard.status.accumulatedEpochs],
+                ["DataSet Size", networkBoard.datasetSize], ["Predictions Size", networkBoard.predictionsSize],
+                ["Input Size", networkBoard.algorithmBoard.inputSize], ["Output Size", networkBoard.algorithmBoard.outputSize]]
+        }, {
+            title: "Training Metrics",
+            summary: [["Status", networkBoard.status.running], ["Epoch Goal", networkBoard.status.goalEpochs],
+                ["Current Epoch", networkBoard.status.currentEpochToGoal], ["Training Id", networkBoard.status.trainingId]]
+        }, {
+            title: "Algorithm Board",
+            summary: [["Learning Ratio", networkBoard.algorithmBoard.learningRatio], ["Complexity", networkBoard.algorithmBoard.complexity],
+                ["Tridimensional", networkBoard.algorithmBoard.tridimensional], ["Algorithm Type", networkBoard.algorithmBoard.algorithmType],
+                ["Shape", networkBoard.algorithmBoard.shape]]
+        }];
 
-    let cardContainer = document.getElementById("card-container");
-    cardContainer.innerText = '';
+        let cardContainer = document.getElementById("card-container");
+        cardContainer.innerText = '';
 
-    summaries.forEach(summary => {
-        const summaryCard = new SummaryCard(summary.title, summary.summary);
-        cardContainer.appendChild(summaryCard);
-        //summaryCard.update(summary.title, summary.summary)
-    });
-
-    //cardContainer.render();
+        summaries.forEach(summary => {
+            const summaryCard = new SummaryCard(summary.title, summary.summary);
+            cardContainer.appendChild(summaryCard);
+        });
+    }
 }
 
 async function extractPlotBoard(networkBoard) {
@@ -110,7 +114,6 @@ async function extractPlotBoard(networkBoard) {
     mseError.prepare();
     //scatterEP.prepare();
     //mseErrorLast.prepare();
-    predicitonOboeIsOnGoing = true;
     predicitionOboe = apiClient.getPredictions(networkBoard.networkId, null, true,() => {
         predicitonOboeIsOnGoing = true;
     }, singlePrediction => {

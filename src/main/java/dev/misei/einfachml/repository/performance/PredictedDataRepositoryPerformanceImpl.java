@@ -39,7 +39,7 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
 
     @Override
     public Flux<PredictedData> findAllByNetworkId(UUID networkId) {
-        return mongoTemplate.findAll(PredictedData.class, networkId.toString());
+        return mongoTemplate.findAll(PredictedData.class, networkId.toString()).sort();
     }
 
     @Override

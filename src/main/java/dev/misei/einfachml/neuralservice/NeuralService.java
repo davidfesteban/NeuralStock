@@ -48,6 +48,7 @@ public class NeuralService {
     }
 
     public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount, Boolean downsample) {
+        log.info("Sending Predictions");
         var totalEpochs = this.networkList.get(networkId).getStatus().getAccumulatedEpochs();
         Flux<PredictedData> flux;
         if (lastEpochAmount == null) {
@@ -63,7 +64,7 @@ public class NeuralService {
 
         return flux.count()
                 .flatMapMany(totalCount -> {
-
+                    log.info(totalCount.toString());
                     int bufferSize = (int) Math.floor((double) totalCount / 100);
                     return flux
                             .buffer(bufferSize)
@@ -71,7 +72,7 @@ public class NeuralService {
                                 PredictedData maxValue = batch.stream()
                                         .max(Comparator.comparingDouble(PredictedData::getMseError))
                                         .orElse(null);
-
+                                log.info("Batch size " + batch.size());
                                 return maxValue != null ? Flux.just(maxValue) : Flux.empty();
                             });
                 });
@@ -90,7 +91,7 @@ public class NeuralService {
         }
 
         return network.computeFlux(dataset, epochs)
-                .buffer(4000)
+                .buffer(10000)
                 .flatMapSequential(batch -> predictedDataRepository.saveBatchByNetworkId(networkId, Flux.fromIterable(batch)))
                 .then();
     }

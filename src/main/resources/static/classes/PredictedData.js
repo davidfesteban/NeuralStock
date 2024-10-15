@@ -22,4 +22,28 @@ export class PredictedData {
             jsonObj.mseError
         );
     }
+
+    equals(other) {
+        if (!(other instanceof PredictedData)) {
+            return false;
+        }
+
+        return (
+            this.uuid === other.uuid &&
+            this.createdAt === other.createdAt &&
+            this.networkId === other.networkId &&
+            this.epochHappened === other.epochHappened &&
+            this.arrayEquals(this.predicted, other.predicted) &&
+            this.arrayEquals(this.inputs, other.inputs) &&
+            this.arrayEquals(this.expected, other.expected) &&
+            this.arrayEquals(this.mseError, other.mseError)
+        );
+    }
+
+    arrayEquals(arr1, arr2) {
+        if (!Array.isArray(arr1) || !Array.isArray(arr2) || arr1.length !== arr2.length) {
+            return false;
+        }
+        return arr1.every((val, index) => val === arr2[index]);
+    }
 }

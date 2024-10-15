@@ -4,19 +4,16 @@ import dev.misei.einfachml.neuralservice.DataService;
 import dev.misei.einfachml.neuralservice.NeuralService;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
-import dev.misei.einfachml.util.ResponseUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivestreams.Publisher;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 @RestController
 @AllArgsConstructor
@@ -42,7 +39,13 @@ public class PredictionAPI {
     @GetMapping("/getPredictionsWithDefinition")
     public Flux<PredictedData> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount,
                                               @RequestParam(required = false) Boolean downsample) {
-        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount, downsample);
-                //.doOnNext(predictedData -> log.info("Fetched predicted data: " + predictedData));
+        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount, downsample)
+                .doOnNext(new Consumer<PredictedData>() {
+                    @Override
+                    public void accept(PredictedData predictedData) {
+                        log.info("Sending Predicted Data already");
+                    }
+                });
+        //.doOnNext(predictedData -> log.info("Fetched predicted data: " + predictedData));
     }
 }

@@ -55,14 +55,15 @@ public class DataService {
     }
 
     public Flux<DataPair> retrieve(UUID networkId, Long createdAtStart, Long createdAtEnd, Integer lastAmount) {
-        if (createdAtStart == null || createdAtEnd == null) {
-            return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId);
-        } else if (lastAmount != null) {
+        if (lastAmount != null) {
             return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId)
                     .sort(Comparator.comparing(DataPair::getCreatedAt).reversed()) //DESC
                     .take(lastAmount)
                     .sort(Comparator.comparing(DataPair::getCreatedAt)); //ASC
+        } else if (createdAtStart == null || createdAtEnd == null) {
+            return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId);
         }
+
         return dataPairRepository.findByNetworkIdAndCreatedAtBetweenOrderByCreatedAtAsc(networkId, createdAtStart, createdAtEnd);
     }
 

@@ -30,7 +30,7 @@ export class TestData {
     }
 
     async createTestData() {
-        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
             false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
             this.networksUUID.push(uuid.uuid)
             apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));

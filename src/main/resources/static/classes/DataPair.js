@@ -16,4 +16,25 @@ export class DataPair {
             jsonObj.expected
         );
     }
+
+    equals(other) {
+        if (!(other instanceof DataPair)) {
+            return false;
+        }
+
+        return (
+            this.uuid === other.uuid &&
+            this.createdAt === other.createdAt &&
+            this.networkId === other.networkId &&
+            this.arraysEqual(this.inputs, other.inputs) &&
+            this.arraysEqual(this.expected, other.expected)
+        );
+    }
+
+    arraysEqual(arr1, arr2) {
+        if (arr1.length !== arr2.length) {
+            return false;
+        }
+        return arr1.every((value, index) => value === arr2[index]);
+    }
 }
