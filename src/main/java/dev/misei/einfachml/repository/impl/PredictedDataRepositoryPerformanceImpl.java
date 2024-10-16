@@ -1,4 +1,4 @@
-package dev.misei.einfachml.repository.performance;
+package dev.misei.einfachml.repository.impl;
 
 import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import dev.misei.einfachml.repository.model.PredictedData;
@@ -25,7 +25,14 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
 
     @Override
     public Mono<Void> saveBatchByNetworkId(UUID networkId, Flux<PredictedData> batch) {
-        return mongoTemplate.<PredictedData>insertAll(batch.collectList(), networkId.toString()).then();
+        //mongoTemplate.save()
+        return batch
+                .onBackpressureDrop(dropped -> log.warn("Dropping item due to backpressure: " + dropped))
+                //.onBackpressureBuffer()
+                .buffer(4000)
+                //.doOnNext(a -> log.info("Saving " + a.size()))
+                .flatMap(list -> mongoTemplate.<PredictedData>insert(list, networkId.toString()))
+                .then();
     }
 
     @Override

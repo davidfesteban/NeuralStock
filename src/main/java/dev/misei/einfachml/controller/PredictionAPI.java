@@ -39,13 +39,6 @@ public class PredictionAPI {
     @GetMapping("/getPredictionsWithDefinition")
     public Flux<PredictedData> getPredictions(@RequestParam UUID networkId, @RequestParam(required = false) Integer lastEpochAmount,
                                               @RequestParam(required = false) Boolean downsample) {
-        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount, downsample)
-                .doOnNext(new Consumer<PredictedData>() {
-                    @Override
-                    public void accept(PredictedData predictedData) {
-                        log.info("Sending Predicted Data already");
-                    }
-                });
-        //.doOnNext(predictedData -> log.info("Fetched predicted data: " + predictedData));
+        return neuralService.getAllPredictionsByNetwork(networkId, lastEpochAmount, downsample);
     }
 }

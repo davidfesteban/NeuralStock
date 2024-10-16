@@ -12,6 +12,7 @@ public interface DataPairRepository extends ReactiveMongoRepository<DataPair, UU
     Flux<DataPair> findByNetworkIdAndCreatedAtBetweenOrderByCreatedAtAsc(UUID networkId, long createdAtStart, long createdAtEnd);
 
     Flux<DataPair> findByNetworkIdOrderByCreatedAtAsc(UUID networkId);
+    Flux<DataPair> findByNetworkIdOrderByCreatedAtDesc(UUID networkId);
 
     Mono<Long> countByNetworkId(UUID networkId);
 

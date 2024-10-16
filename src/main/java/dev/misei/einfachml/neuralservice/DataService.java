@@ -56,8 +56,7 @@ public class DataService {
 
     public Flux<DataPair> retrieve(UUID networkId, Long createdAtStart, Long createdAtEnd, Integer lastAmount) {
         if (lastAmount != null) {
-            return dataPairRepository.findByNetworkIdOrderByCreatedAtAsc(networkId)
-                    .sort(Comparator.comparing(DataPair::getCreatedAt).reversed()) //DESC
+            return dataPairRepository.findByNetworkIdOrderByCreatedAtDesc(networkId)
                     .take(lastAmount)
                     .sort(Comparator.comparing(DataPair::getCreatedAt)); //ASC
         } else if (createdAtStart == null || createdAtEnd == null) {

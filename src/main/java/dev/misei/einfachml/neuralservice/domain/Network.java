@@ -51,18 +51,17 @@ public class Network extends ArrayList<Layer> {
 
     //Avoid to have huge collections in memory
     public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs) {
-        return Flux.range(0, epochs)
-                .flatMapSequential(epoch -> {
-                    status.setCurrentEpochToGoal(epoch);
-                    status.incrementAccEpoch();
-                    return dataset.map(dataPair -> {
+        return Flux.range(status.getAccumulatedEpochs(), epochs)
+                .concatMap(epoch -> {
+                    status.setCurrentEpochToGoal(epoch - status.getAccumulatedEpochs());
+                    return dataset.concatMap(dataPair -> {
                         computeForward(dataPair.getInputs());
                         PredictedData predictedData = new PredictedData(
                                 UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
-                                status.getAccumulatedEpochs() - 1, outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                                epoch, outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
                                 dataPair.getInputs(), dataPair.getExpected());
                         computeBackward(dataPair.getExpected());
-                        return predictedData;
+                        return Mono.just(predictedData);
                     });
                 })
                 .doOnSubscribe(subscription -> {
@@ -70,7 +69,10 @@ public class Network extends ArrayList<Layer> {
                     status.setTrainingId(UUID.randomUUID());
                     status.setGoalEpochs(epochs);
                 })
-                .doOnTerminate(() -> status.setRunning(false));
+                .doOnTerminate(() -> {
+                    status.setAccumulatedEpochs(status.getAccumulatedEpochs() + epochs);
+                    status.setRunning(false);
+                });
     }
 
     public Flux<PredictedData> predictAsync(List<DataPair> dataset) {

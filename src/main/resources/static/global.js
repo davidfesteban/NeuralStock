@@ -105,22 +105,27 @@ async function extractPlotBoard(networkBoard) {
         console.log("Stopping because new refreshing plot");
         predicitonOboeIsOnGoing = false;
         previousOboeNetworkId = networkBoard.networkId;
+        mseError.prepare(true);
     } else if(previousOboeNetworkId === undefined || !previousOboeNetworkId === networkBoard.networkId) {
         console.log("Reassigning network id");
         previousOboeNetworkId = networkBoard.networkId;
+        mseError.prepare(true);
+    } else if(previousOboeNetworkId === networkBoard.networkId) {
+        mseError.prepare(false);
     }
 
     console.log("Refreshing plot");
-    mseError.prepare();
+
     //scatterEP.prepare();
     //mseErrorLast.prepare();
-    predicitionOboe = apiClient.getPredictions(networkBoard.networkId, null, true,() => {
+    predicitionOboe = apiClient.getMSEData(networkBoard.networkId,() => {
         predicitonOboeIsOnGoing = true;
     }, singlePrediction => {
         mseError.update(singlePrediction);
         //scatterEP.update(singlePrediction);
         //mseErrorLast.update(singlePrediction);
     }, () => {
+        console.log("Ended plot");
         predicitonOboeIsOnGoing = false;
     });
 }

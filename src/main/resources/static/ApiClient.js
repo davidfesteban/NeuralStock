@@ -2,6 +2,7 @@ import {PredictedData} from "./classes/PredictedData.js";
 import {NetworkBoard} from "./classes/NetworkBoard.js";
 import {DataPair} from "./classes/DataPair.js";
 import {UUIDResponse} from "./classes/UUIDResponse.js";
+import {MSEData} from "./classes/MSEData.js";
 
 let API_BASE_URL = 'http://localhost:8080';
 
@@ -249,6 +250,32 @@ export class ApiClient {
             .node('![*]', function (predictedDataJson) {
                 callback(PredictedData.fromJson(predictedDataJson));
                 console.log('Received getPredictions');
+            })
+            .done(function () {
+                terminatedCallback();
+                console.log('getPredictions Stream completed');
+            })
+            .fail(function (err) {
+                terminatedCallback();
+                console.error('Error occurred:', err);
+            });
+    }
+
+    async getMSEData(networkId, onStart, callback, terminatedCallback) {
+        const url = new URL(`${API_BASE_URL}/api/metrics/mseData`);
+        url.searchParams.append('networkId', networkId);
+
+        onStart();
+        return oboe({
+            url: url,
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .node('![*]', function (mseDataJson) {
+                callback(MSEData.fromJson(mseDataJson));
+                console.log('Received mseData');
             })
             .done(function () {
                 terminatedCallback();
