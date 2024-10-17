@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 //TODO: Refactor antipattern
@@ -39,7 +40,7 @@ public class Network extends ArrayList<Layer> {
         // 3D structure: layer -> sub-layer -> neurons
         result.addAll(algorithm.drawShape().stream()
                 .map(layer -> layer.stream().map(
-                                subLayerSize -> IntStream.range(0, subLayerSize).mapToObj(i -> new Neuron(algorithm)).toList()).map(SubLayer::new) // Create Neurons for each sublayer
+                                subLayerSize -> IntStream.range(0, subLayerSize).mapToObj(i -> new Neuron(algorithm)).toList()).map(SubLayer::new)
                         .toList())
                 .map(Layer::new)
                 .toList());
@@ -50,10 +51,16 @@ public class Network extends ArrayList<Layer> {
     }
 
     //Avoid to have huge collections in memory
-    public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs) {
+    public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs, Consumer<Network> networkCallback) {
         return Flux.range(status.getAccumulatedEpochs(), epochs)
                 .concatMap(epoch -> {
                     status.setCurrentEpochToGoal(epoch - status.getAccumulatedEpochs());
+
+                    //Each 1000 epochs, save the state so we can go in the past
+                    if (epoch % 1000 == 0) {
+                        networkCallback.accept(this);
+                    }
+
                     return dataset.concatMap(dataPair -> {
                         computeForward(dataPair.getInputs());
                         PredictedData predictedData = new PredictedData(
@@ -61,6 +68,12 @@ public class Network extends ArrayList<Layer> {
                                 epoch, outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
                                 dataPair.getInputs(), dataPair.getExpected());
                         computeBackward(dataPair.getExpected());
+
+                        if (predictedData.getMseError().isNaN() || predictedData.getMseError().isInfinite() ||
+                                predictedData.getPredicted().stream().anyMatch(aDouble -> aDouble.isNaN() || aDouble.isInfinite())) {
+                            return Mono.error(new IllegalStateException("NaN | Inf detected in prediction results. Stopping execution."));
+                        }
+
                         return Mono.just(predictedData);
                     });
                 })
@@ -77,7 +90,7 @@ public class Network extends ArrayList<Layer> {
 
     public Flux<PredictedData> predictAsync(List<DataPair> dataset) {
         return Flux.fromIterable(dataset)
-                .flatMapSequential(dataPair -> {
+                .concatMap(dataPair -> {
                     computeForward(dataPair.getInputs());
                     PredictedData predictedData = new PredictedData(
                             UUID.randomUUID(),
@@ -98,12 +111,12 @@ public class Network extends ArrayList<Layer> {
                 });
     }
 
-    private void computeForward(List<Double> inputs) {
+    public void computeForward(List<Double> inputs) {
         IntStream.range(0, inboundFeeder.size()).forEach(i -> inboundFeeder.get(i).parentActivation = inputs.get(i));
         this.forEach(Layer::computeForward);
     }
 
-    private void computeBackward(List<Double> outputs) {
+    public void computeBackward(List<Double> outputs) {
         IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
 
         this.reversed().forEach(Layer::prepareGradient);
@@ -150,10 +163,6 @@ public class Network extends ArrayList<Layer> {
 
         outboundFeeder.clear();
         this.getLast().getFirst().forEach(neuron -> outboundFeeder.addAll(neuron.outboundConnections));
-    }
-
-    public synchronized Algorithm getAlgorithm() {
-        return algorithm;
     }
 
     public synchronized Status getStatus() {

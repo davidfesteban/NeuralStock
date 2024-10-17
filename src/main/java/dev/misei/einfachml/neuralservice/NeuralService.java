@@ -1,8 +1,11 @@
 package dev.misei.einfachml.neuralservice;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.domain.Status;
 import dev.misei.einfachml.repository.MetricsRepository;
+import dev.misei.einfachml.repository.NetworkBackupRepository;
 import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.MSEData;
@@ -15,6 +18,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 @Service
 @Slf4j
@@ -25,6 +29,8 @@ public class NeuralService {
 
     private PredictedDataRepositoryPerformance predictedDataRepository;
     private MetricsRepository metricsRepository;
+    private NetworkBackupRepository networkBackupRepository;
+    private ObjectMapper objectMapper;
 
     public Mono<UUID> load(UUID uuid, Network network) {
         return Mono.defer(() -> {
@@ -61,22 +67,7 @@ public class NeuralService {
             return flux;
         }
 
-        return flux; //flux.count()
-        // .flatMapMany(totalCount -> {
-        //     log.info(totalCount.toString());
-        //     int bufferSize = (int) Math.floor((double) totalCount / 100);
-        //     return flux
-        //             .buffer(bufferSize)
-        //             .flatMap(batch -> {
-        //                 PredictedData maxValue = batch.stream()
-        //                         .max(Comparator.comparingDouble(PredictedData::getMseError))
-        //                         .orElse(null);
-        //                 log.info("Batch size " + batch.size());
-        //                 return maxValue != null ? Flux.just(maxValue) : Flux.empty();
-        //             });
-        // });
-
-
+        return flux;
     }
 
     public Flux<Status> getAllStatus() {
@@ -93,7 +84,13 @@ public class NeuralService {
         //        .as(predictedDataFlux -> predictedDataRepository.saveBatchByNetworkId(networkId, predictedDataFlux))
         //        .as(saveToMSEError)
         //        .then();
-        return network.computeFlux(dataset, epochs)
+        return network.computeFlux(dataset, epochs, networkBackup -> {
+                    try {
+                        networkBackupRepository.objectMapper.writeValueAsString(networkBackup);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .publish(flux -> {
                     Mono<Void> saveToPredictions = flux.buffer(3000)
                             .flatMap(batch -> predictedDataRepository.saveBatchByNetworkId(networkId, Flux.fromIterable(batch)), 2)
@@ -104,8 +101,14 @@ public class NeuralService {
                             .then();
 
                     return Mono.when(saveToPredictions, saveToMetrics);
-                }).then();
+                })
+                .onErrorResume(error -> {
+                    log.error("Error occurred during execution: " + error.getMessage());
+                    restoreNetworkState();
 
+                    return Mono.error(error);
+                })
+                .then();
     }
 
     public Mono<Void> saveGroupedMSEData(Flux<PredictedData> predictedDataFlux) {

@@ -29,17 +29,71 @@ export class TestData {
         return datapairs;  // Return the list of datapairs
     }
 
+    createDataset(networkId) {
+        const dataset = [];
+
+        // Loop through numbers from 0 to 10
+        for (let a = 0; a <= 10; a++) {
+            for (let b = 0; b <= 10; b++) {
+                // Perform sum (operation 0)
+                dataset.push(new DataPair(
+                    crypto.randomUUID(),  // Generate a random UUID for each DataPair
+                    Date.now(),  // Use the current timestamp
+                    networkId,  // Use the provided networkId
+                    [a, b, 0],  // Inputs list [a, b, operation (0 = sum)]
+                    [a + b]  // Expected result as a list
+                ));
+
+                // Perform subtraction (operation 1)
+                dataset.push(new DataPair(
+                    crypto.randomUUID(),
+                    Date.now(),
+                    networkId,
+                    [a, b, 1],  // Inputs list [a, b, operation (1 = subtraction)]
+                    [a - b]  // Expected result as a list
+                ));
+
+                // Perform multiplication (operation 2)
+                dataset.push(new DataPair(
+                    crypto.randomUUID(),
+                    Date.now(),
+                    networkId,
+                    [a, b, 2],  // Inputs list [a, b, operation (2 = multiplication)]
+                    [a * b]  // Expected result as a list
+                ));
+            }
+        }
+
+        return dataset;
+    }
+
     async createTestData() {
-        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.001, 1.5,
             false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
             this.networksUUID.push(uuid.uuid)
-            apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
+            apiClient.includeDataSet(uuid.uuid, this.createDataset(uuid.uuid));
         });
-        //await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
-        //    false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
-        //    this.networksUUID.push(uuid.uuid)
-        //    apiClient.includeDataSet(uuid.uuid, this.createDatasetSum(uuid.uuid));
-        //})
+        /*
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+            true, "LEAKY_RELU", "COMPRESSOR", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+            apiClient.includeDataSet(uuid.uuid, this.createDataset(uuid.uuid));
+        })
+
+
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+            false, "LEAKY_RELU", "EXPANDER", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+            apiClient.includeDataSet(uuid.uuid, this.createDataset(uuid.uuid));
+        })
+
+        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
+            true, "LEAKY_RELU", "EXPANDER", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+            apiClient.includeDataSet(uuid.uuid, this.createDataset(uuid.uuid));
+        })
+*/
         //await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1,
         //    true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
         //    this.networksUUID.push(uuid.uuid)
