@@ -45,10 +45,6 @@ public class DataService {
                 topic, createdAtStart, createdAtEnd);
     }
 
-    public Mono<Void> cleanDatapair(UUID networkId) {
-        return dataPairRepository.deleteByNetworkId(networkId).then();
-    }
-
     public Mono<Void> deleteDataSetByUUID(Flux<UUID> dataSetUUID) {
         return dataSetUUID
                 .flatMap(dataPairRepository::deleteById)
@@ -56,11 +52,6 @@ public class DataService {
     }
 
     public Mono<Void> deleteDataSetByTopic(String topic) {
-        dataPairRepository.deleteByTopicIgnoreCase(topic);
-        return Mono.empty();
-    }
-
-    public Mono<Long> countByNetworkId(UUID networkId) {
-        return dataPairRepository.countByNetworkId(networkId);
+        return dataPairRepository.deleteByTopicIgnoreCase(topic);
     }
 }

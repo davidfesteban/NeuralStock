@@ -4,6 +4,7 @@ import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.operator.NetworkBackupRepositoryOperator;
 import dev.misei.einfachml.neuralservice.operator.NetworkSummaryOperator;
 import dev.misei.einfachml.repository.model.NetworkBoard;
+import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@AllArgsConstructor
 @Component
 public class NetworkLoadService {
     private final Map<UUID, Network> networkList = new HashMap<>();

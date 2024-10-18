@@ -30,7 +30,7 @@ public class PredictionAPI {
     }
 
     @PostMapping("/predict")
-    public Flux<PredictedData> predict(@RequestParam UUID networkId, @RequestBody List<DataPair> dataSet) {
+    public Flux<PredictedData> predict(@RequestParam UUID networkId, @RequestBody Flux<DataPair> dataSet) {
         return neuralService.predictElasticAsync(networkId, dataSet);
     }
 }
