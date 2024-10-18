@@ -25,10 +25,14 @@ let predicitionOboe;
 //PreviousBoard
 let previousBoard;
 
+function addDataSetLibrary() {
+
+}
+
 //Window Register
 window.onload = async function () {
     setInterval(() => {
-        apiClient.getAllNetworks(networkBoard => {
+        apiClient.networkAPI.getAllNetworkBoard(networkBoard => {
             networkBoardMap.set(networkBoard.networkId, networkBoard);
             if(currentBoardId === networkBoard.networkId) {
                 extractCardsDOM(networkBoard);
@@ -57,16 +61,31 @@ window.onload = async function () {
             }
         })
     }, 5000);
+
+    setInterval(() => {
+        let topicSummary = [];
+
+        apiClient.dataSetAPI.getAllTopics(topicList => {
+            for (const topicModel of topicList) {
+                topicSummary.push([topicModel.topic, topicModel.count])
+            }
+            let cardContainer = document.getElementById("card-container-topics");
+            cardContainer.innerText = '';
+
+            const summaryCard = new SummaryCard("DataSet Topics", topicSummary);
+            cardContainer.appendChild(summaryCard);
+        });
+
+    }, 5000)
+
 };
 
 function extractCardsDOM(networkBoard) {
     if(previousBoard == null || (!previousBoard.equals(networkBoard))) {
-        //TODO: Refactor to ViewModel with bindings
         previousBoard = networkBoard;
         let summaries = [{
             title: "Network Status",
             summary: [["Network Id", networkBoard.networkId], ["Total Epochs", networkBoard.status.accumulatedEpochs],
-                ["DataSet Size", networkBoard.datasetSize], ["Predictions Size", networkBoard.predictionsSize],
                 ["Input Size", networkBoard.algorithmBoard.inputSize], ["Output Size", networkBoard.algorithmBoard.outputSize]]
         }, {
             title: "Training Metrics",
@@ -118,7 +137,7 @@ async function extractPlotBoard(networkBoard) {
 
     //scatterEP.prepare();
     //mseErrorLast.prepare();
-    predicitionOboe = apiClient.getMSEData(networkBoard.networkId,() => {
+    predicitionOboe = apiClient.metricsAPI.getMSEData(networkBoard.networkId,() => {
         predicitonOboeIsOnGoing = true;
     }, singlePrediction => {
         mseError.update(singlePrediction);

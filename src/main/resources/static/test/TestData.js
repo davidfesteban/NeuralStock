@@ -29,7 +29,7 @@ export class TestData {
         return datapairs;  // Return the list of datapairs
     }
 
-    createDataset(networkId) {
+    createDataset() {
         const dataset = [];
 
         // Loop through numbers from 0 to 10
@@ -38,8 +38,8 @@ export class TestData {
                 // Perform sum (operation 0)
                 dataset.push(new DataPair(
                     crypto.randomUUID(),  // Generate a random UUID for each DataPair
+                    "SumRestMultiply",
                     Date.now(),  // Use the current timestamp
-                    networkId,  // Use the provided networkId
                     [a, b, 0],  // Inputs list [a, b, operation (0 = sum)]
                     [a + b]  // Expected result as a list
                 ));
@@ -47,8 +47,8 @@ export class TestData {
                 // Perform subtraction (operation 1)
                 dataset.push(new DataPair(
                     crypto.randomUUID(),
+                    "SumRestMultiply",
                     Date.now(),
-                    networkId,
                     [a, b, 1],  // Inputs list [a, b, operation (1 = subtraction)]
                     [a - b]  // Expected result as a list
                 ));
@@ -56,8 +56,8 @@ export class TestData {
                 // Perform multiplication (operation 2)
                 dataset.push(new DataPair(
                     crypto.randomUUID(),
+                    "SumRestMultiply",
                     Date.now(),
-                    networkId,
                     [a, b, 2],  // Inputs list [a, b, operation (2 = multiplication)]
                     [a * b]  // Expected result as a list
                 ));
@@ -69,10 +69,10 @@ export class TestData {
 
     async createTestData() {
 
-        await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.001, 1.5,
-            false, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+        await apiClient.networkAPI.createNetwork(new AlgorithmBoard(3, 1, 0.001, 1.5,
+            true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
             this.networksUUID.push(uuid.uuid)
-            apiClient.includeDataSet(uuid.uuid, this.createDataset(uuid.uuid));
+            apiClient.dataSetAPI.includeDataSet(this.createDataset(), () => {});
         });
         /*
         await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
@@ -107,7 +107,7 @@ export class TestData {
     }
 
     async compute(epoch) {
-        this.networksUUID.forEach(uuid => apiClient.compute(uuid, epoch));
+        this.networksUUID.forEach(uuid => apiClient.predictionAPI.compute("SumRestMultiply", uuid, epoch));
     }
 
 }

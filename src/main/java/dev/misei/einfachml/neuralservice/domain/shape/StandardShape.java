@@ -10,6 +10,7 @@ public enum StandardShape implements Shape {
         public String getName() {
             return this.name();
         }
+
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -32,6 +33,7 @@ public enum StandardShape implements Shape {
         public String getName() {
             return this.name();
         }
+
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -54,6 +56,7 @@ public enum StandardShape implements Shape {
         public String getName() {
             return this.name();
         }
+
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -63,7 +66,7 @@ public enum StandardShape implements Shape {
 
             while (neuronsInCurrentLayer > outputSize) {
                 shape.add(createLayer(neuronsInCurrentLayer, tridimensional));
-               --neuronsInCurrentLayer;
+                --neuronsInCurrentLayer;
             }
 
             shape.add(List.of(outputSize));
@@ -76,6 +79,7 @@ public enum StandardShape implements Shape {
         public String getName() {
             return this.name();
         }
+
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();
@@ -108,6 +112,7 @@ public enum StandardShape implements Shape {
         public String getName() {
             return this.name();
         }
+
         @Override
         public List<List<Integer>> draw(int inputSize, int outputSize, double complexity, boolean tridimensional) {
             List<List<Integer>> shape = new ArrayList<>();

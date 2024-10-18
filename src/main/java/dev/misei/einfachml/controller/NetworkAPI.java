@@ -35,8 +35,8 @@ public class NetworkAPI {
         return networkLoadService.load(networkId, network, false).map(UUIDResponse::new);
     }
 
-    @GetMapping("/getAll")
-    public Flux<NetworkBoard> getAllNetworks() {
+    @GetMapping("/getAllSummary")
+    public Flux<NetworkBoard> getAllNetworkBoards() {
         return networkLoadService.getAllSummariesEnriched();
     }
 

@@ -1,6 +1,7 @@
 package dev.misei.einfachml.neuralservice.domain;
 
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
+import lombok.AllArgsConstructor;
 import org.springframework.util.Assert;
 
 import java.util.ArrayList;

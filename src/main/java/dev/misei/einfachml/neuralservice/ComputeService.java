@@ -27,7 +27,7 @@ public class ComputeService {
         return networkLoadService.get(networkId)
                 .flatMap(network -> {
                     return networkFluxOperator.compute(network, dataset, epochs, networkBackup -> {
-                                networkLoadService.saveNetworkBackup(networkBackup).block();
+                                networkLoadService.saveNetworkBackup(networkBackup).subscribe();
                             })
                             .publish(flux -> {
                                 return metricsPredictionRepositoryOperator.processOrderedEpochPredictions(flux);

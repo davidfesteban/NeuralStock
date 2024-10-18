@@ -1,8 +1,10 @@
 package dev.misei.einfachml.neuralservice.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.repository.model.PredictedData;
-import lombok.Getter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -12,13 +14,16 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 
 @Slf4j
+@AllArgsConstructor
+@RequiredArgsConstructor
+@Setter
 @Getter
 public class Network extends ArrayList<Layer> {
 
-    private final Algorithm algorithm;
-    private final List<Connection> inboundFeeder;
-    private final List<Connection> outboundFeeder;
-    private final Status status;
+    private Algorithm algorithm;
+    private List<Connection> inboundFeeder;
+    private List<Connection> outboundFeeder;
+    private Status status;
 
     private Network(UUID networkId, Algorithm algorithm) {
         this.algorithm = algorithm;

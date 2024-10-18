@@ -1,5 +1,6 @@
 package dev.misei.einfachml.controller;
 
+import dev.misei.einfachml.controller.dto.TopicResponse;
 import dev.misei.einfachml.neuralservice.DataService;
 import dev.misei.einfachml.repository.model.DataPair;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,11 @@ public class DataSetAPI {
     @PostMapping("/removeTopic")
     public Mono<Void> removeDataSet(@RequestParam String topic) {
         return dataService.deleteDataSetByTopic(topic);
+    }
+
+    @GetMapping("/getAllTopics")
+    public Flux<TopicResponse> getAllTopics() {
+        return dataService.retrieveTopics();
     }
 
 }

@@ -1,15 +1,16 @@
 export class DataPair {
-    constructor(uuid, createdAt, networkId, inputs, expected) {
-        this.uuid = uuid || crypto.randomUUID();  // UUID
-        this.createdAt = createdAt || Date.now();  // long as number
-        this.networkId = networkId;  // UUID
-        this.inputs = inputs;  // Array<number>
-        this.expected = expected;  // Array<number>
+    constructor(uuid, topic, createdAt, inputs, expected) {
+        this.uuid = uuid || crypto.randomUUID();  // UUID string
+        this.topic = topic;  // String
+        this.createdAt = createdAt || Date.now();  // Timestamp in milliseconds (int64)
+        this.inputs = inputs;  // Array of numbers (doubles)
+        this.expected = expected;
     }
 
     static fromJson(jsonObj) {
         return new DataPair(
             jsonObj.uuid,
+            jsonObj.topic,
             jsonObj.createdAt,
             jsonObj.networkId,
             jsonObj.inputs,
@@ -25,7 +26,7 @@ export class DataPair {
         return (
             this.uuid === other.uuid &&
             this.createdAt === other.createdAt &&
-            this.networkId === other.networkId &&
+            this.topic === other.topic &&
             this.arraysEqual(this.inputs, other.inputs) &&
             this.arraysEqual(this.expected, other.expected)
         );
