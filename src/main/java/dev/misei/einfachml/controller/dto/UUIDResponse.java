@@ -1,4 +1,4 @@
-package dev.misei.einfachml.controller;
+package dev.misei.einfachml.controller.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

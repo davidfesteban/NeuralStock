@@ -11,8 +11,14 @@ public class NetworkBoardMapper {
     public static NetworkBoard from(UUID uuid, AlgorithmBoard algorithmBoard) {
         return new NetworkBoard(uuid,
                 algorithmBoard,
-                new Status(uuid, false, 0, null, 0, 0),
-                0,
-                0);
+                new Status(uuid, false, 0, null, 0, 0));
+    }
+
+    public static NetworkBoard from(Network network) {
+        return new NetworkBoard(
+                network.getStatus().getNetworkId(),
+                AlgorithmBoardMapper.to(network.getAlgorithm()),
+                network.getStatus()
+        );
     }
 }

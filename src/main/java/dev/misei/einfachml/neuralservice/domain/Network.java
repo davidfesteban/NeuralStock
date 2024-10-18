@@ -1,23 +1,16 @@
 package dev.misei.einfachml.neuralservice.domain;
 
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
-import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-//TODO: Refactor antipattern
-//TODO: Lock to avoid multiple ops
-//TODO: Inmmutable Algorithm
 @Slf4j
 @Getter
 public class Network extends ArrayList<Layer> {
@@ -50,73 +43,32 @@ public class Network extends ArrayList<Layer> {
         return result;
     }
 
-    //Avoid to have huge collections in memory
-    public Flux<PredictedData> computeFlux(Flux<DataPair> dataset, int epochs, Consumer<Network> networkCallback) {
-        return Flux.range(status.getAccumulatedEpochs(), epochs)
-                .concatMap(epoch -> {
-                    status.setCurrentEpochToGoal(epoch - status.getAccumulatedEpochs());
 
-                    //Each 1000 epochs, save the state so we can go in the past
-                    if (epoch % 1000 == 0) {
-                        networkCallback.accept(this);
-                    }
+    public PredictedData compute(List<Double> input, List<Double> expect) {
+        computeForward(input);
+        PredictedData predictedData = new PredictedData(
+                UUID.randomUUID(), Instant.now().toEpochMilli(), status.getNetworkId(),
+                status.getAccumulatedEpochs(), outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                input, expect);
+        computeBackward(expect);
 
-                    return dataset.concatMap(dataPair -> {
-                        computeForward(dataPair.getInputs());
-                        PredictedData predictedData = new PredictedData(
-                                UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
-                                epoch, outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
-                                dataPair.getInputs(), dataPair.getExpected());
-                        computeBackward(dataPair.getExpected());
-
-                        if (predictedData.getMseError().isNaN() || predictedData.getMseError().isInfinite() ||
-                                predictedData.getPredicted().stream().anyMatch(aDouble -> aDouble.isNaN() || aDouble.isInfinite())) {
-                            return Mono.error(new IllegalStateException("NaN | Inf detected in prediction results. Stopping execution."));
-                        }
-
-                        return Mono.just(predictedData);
-                    });
-                })
-                .doOnSubscribe(subscription -> {
-                    status.setRunning(true);
-                    status.setTrainingId(UUID.randomUUID());
-                    status.setGoalEpochs(epochs);
-                })
-                .doOnTerminate(() -> {
-                    status.setAccumulatedEpochs(status.getAccumulatedEpochs() + epochs);
-                    status.setRunning(false);
-                });
+        return predictedData;
     }
 
-    public Flux<PredictedData> predictAsync(List<DataPair> dataset) {
-        return Flux.fromIterable(dataset)
-                .concatMap(dataPair -> {
-                    computeForward(dataPair.getInputs());
-                    PredictedData predictedData = new PredictedData(
-                            UUID.randomUUID(),
-                            Instant.now().toEpochMilli(),
-                            dataPair.getNetworkId(),
-                            status.getAccumulatedEpochs(),
-                            outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
-                            dataPair.getInputs(),
-                            dataPair.getExpected()
-                    );
-                    return Mono.just(predictedData);
-                })
-                .doOnSubscribe(subscription -> {
-                    status.setRunning(true);
-                })
-                .doOnTerminate(() -> {
-                    status.setRunning(false);
-                });
+    public PredictedData predict(List<Double> input, List<Double> expect) {
+        computeForward(input);
+        return new PredictedData(
+                UUID.randomUUID(), Instant.now().toEpochMilli(), status.getNetworkId(),
+                status.getAccumulatedEpochs(), outboundFeeder.stream().map(connection -> connection.parentActivation).toList(),
+                input, expect);
     }
 
-    public void computeForward(List<Double> inputs) {
+    private void computeForward(List<Double> inputs) {
         IntStream.range(0, inboundFeeder.size()).forEach(i -> inboundFeeder.get(i).parentActivation = inputs.get(i));
         this.forEach(Layer::computeForward);
     }
 
-    public void computeBackward(List<Double> outputs) {
+    private void computeBackward(List<Double> outputs) {
         IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
 
         this.reversed().forEach(Layer::prepareGradient);
@@ -130,7 +82,6 @@ public class Network extends ArrayList<Layer> {
             neuron.inboundConnections.add(connection);
             inboundFeeder.add(connection);
         });
-
 
         //Connect the rest
         for (int layerIndex = 0; layerIndex < this.size() - 1; layerIndex++) {

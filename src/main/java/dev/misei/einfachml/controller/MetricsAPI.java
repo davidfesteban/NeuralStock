@@ -1,5 +1,6 @@
 package dev.misei.einfachml.controller;
 
+import dev.misei.einfachml.neuralservice.operator.MetricsPredictionRepositoryOperator;
 import dev.misei.einfachml.repository.MetricsRepository;
 import dev.misei.einfachml.repository.model.MSEData;
 import lombok.AllArgsConstructor;
@@ -18,11 +19,11 @@ import java.util.UUID;
 @Slf4j
 public class MetricsAPI {
 
-    private final MetricsRepository metricsRepository;
+    private MetricsPredictionRepositoryOperator metricsPredictionRepositoryOperator;
 
     @GetMapping("/mseData")
     public Flux<MSEData> getPredictions(@RequestParam UUID networkId) {
-        return metricsRepository.findByNetworkIdOrderByEpochHappenedAsc(networkId);
+        return metricsPredictionRepositoryOperator.getMSEData(networkId);
     }
 
 }

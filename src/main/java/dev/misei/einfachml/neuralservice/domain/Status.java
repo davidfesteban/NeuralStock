@@ -18,7 +18,7 @@ public class Status {
     private int goalEpochs;
     private int currentEpochToGoal;
 
-    void incrementAccEpoch() {
+    public void incrementAccEpoch() {
         ++accumulatedEpochs;
     }
 }

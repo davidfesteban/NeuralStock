@@ -1,12 +1,11 @@
 package dev.misei.einfachml.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.misei.einfachml.controller.dto.UUIDResponse;
 import dev.misei.einfachml.controller.mapper.AlgorithmBoardMapper;
-import dev.misei.einfachml.controller.mapper.NetworkBoardMapper;
 import dev.misei.einfachml.neuralservice.DataService;
-import dev.misei.einfachml.neuralservice.NeuralService;
+import dev.misei.einfachml.neuralservice.ComputeService;
+import dev.misei.einfachml.neuralservice.NetworkLoadService;
 import dev.misei.einfachml.neuralservice.domain.Network;
-import dev.misei.einfachml.repository.NetworkBoardRepository;
 import dev.misei.einfachml.repository.model.AlgorithmBoard;
 import dev.misei.einfachml.repository.model.NetworkBoard;
 import lombok.AllArgsConstructor;
@@ -23,51 +22,22 @@ import java.util.UUID;
 @Slf4j
 public class NetworkAPI {
 
-    private NetworkBoardRepository networkBoardRepository;
-    private NeuralService neuralService;
+    private ComputeService neuralService;
     private DataService dataService;
-    private ObjectMapper objectMapper;
+    private NetworkLoadService networkLoadService;
 
     @PostMapping("/create")
     public Mono<UUIDResponse> createNetwork(@RequestBody AlgorithmBoard algorithmBoard) {
         var algorithm = AlgorithmBoardMapper.from(algorithmBoard);
+        UUID networkId = UUID.randomUUID();
+        Network network = Network.create(networkId, algorithm);
 
-        Network network = Network.create(UUID.randomUUID(), algorithm);
-        UUID networkId = network.getStatus().getNetworkId();
-
-        return networkBoardRepository.save(NetworkBoardMapper.from(networkId, AlgorithmBoardMapper.to(algorithm)))
-                .then(neuralService.load(networkId, network))
-                .thenReturn(new UUIDResponse(networkId));
+        return networkLoadService.load(networkId, network, false).map(UUIDResponse::new);
     }
 
     @GetMapping("/getAll")
     public Flux<NetworkBoard> getAllNetworks() {
-        return neuralService.getAllStatus()
-                .flatMap(status -> {
-                    return networkBoardRepository.findById(status.getNetworkId())
-                            .flatMap(networkBoard -> {
-                                networkBoard.setStatus(status);
-
-                                return dataService.countByNetworkId(networkBoard.getNetworkId())
-                                        .flatMap(datasetSize -> {
-                                            networkBoard.setDatasetSize(datasetSize);
-                                            return neuralService.countByNetworkId(networkBoard.getNetworkId())
-                                                    .map(predictionsSize -> {
-                                                        networkBoard.setPredictionsSize(predictionsSize);
-                                                        return networkBoard;
-                                                    });
-                                        });
-                            });
-                })
-                .flatMap(networkBoard -> networkBoardRepository.save(networkBoard));
-    }
-
-    @GetMapping("/deleteEntire")
-    public Mono<Void> delete(@RequestParam UUID networkId) {
-        return dataService.cleanDatapair(networkId)
-                .then(neuralService.delete(networkId))
-                .then(networkBoardRepository.deleteById(networkId))
-                .then();
+        return networkLoadService.getAllSummariesEnriched();
     }
 
     /*

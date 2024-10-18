@@ -23,7 +23,4 @@ public class NetworkBoard {
 
     //Current Status
     Status status;
-
-    long datasetSize;
-    long predictionsSize;
 }

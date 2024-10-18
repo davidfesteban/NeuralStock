@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -24,15 +25,8 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
     private ReactiveMongoTemplate mongoTemplate;
 
     @Override
-    public Mono<Void> saveBatchByNetworkId(UUID networkId, Flux<PredictedData> batch) {
-        //mongoTemplate.save()
-        return batch
-                .onBackpressureDrop(dropped -> log.warn("Dropping item due to backpressure: " + dropped))
-                //.onBackpressureBuffer()
-                .buffer(4000)
-                //.doOnNext(a -> log.info("Saving " + a.size()))
-                .flatMap(list -> mongoTemplate.<PredictedData>insert(list, networkId.toString()))
-                .then();
+    public Mono<Void> saveBatchByNetworkId(UUID networkId, List<PredictedData> batch) {
+        return mongoTemplate.insert(batch, networkId.toString()).then();
     }
 
     @Override
@@ -57,10 +51,5 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
     @Override
     public Mono<Void> deleteByNetworkId(UUID networkId) {
         return mongoTemplate.dropCollection(networkId.toString());
-    }
-
-    @Override
-    public Mono<Void> deleteAll() {
-        return mongoTemplate.getCollectionNames().flatMap((Function<String, Publisher<?>>) s -> mongoTemplate.dropCollection(s)).then();
     }
 }

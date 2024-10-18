@@ -9,16 +9,13 @@ import org.springframework.lang.NonNull;
 import java.util.List;
 import java.util.UUID;
 
-//DataPairDocument_NetworkId  (Relation N:1)
-
 @Document
 @AllArgsConstructor
 @Data
 public class DataPair implements Comparable<DataPair> {
-
-    private UUID networkId;
     @Id
     private UUID uuid;
+    private String topic;
     private long createdAt;
     private List<Double> inputs;
     private List<Double> expected;
