@@ -5,7 +5,6 @@ export class Status {
         this.accumulatedEpochs = accumulatedEpochs;  // int
         this.trainingId = trainingId || null;  // UUID
         this.goalEpochs = goalEpochs;  // int
-        this.currentEpochToGoal = currentEpochToGoal;  // int
     }
 
     static fromJson(jsonObj) {
@@ -14,8 +13,7 @@ export class Status {
             jsonObj.running,
             jsonObj.accumulatedEpochs,
             jsonObj.trainingId,
-            jsonObj.goalEpochs,
-            jsonObj.currentEpochToGoal
+            jsonObj.goalEpochs
         );
     }
 
@@ -29,8 +27,7 @@ export class Status {
             this.running === other.running &&
             this.accumulatedEpochs === other.accumulatedEpochs &&
             this.trainingId === other.trainingId &&
-            this.goalEpochs === other.goalEpochs &&
-            this.currentEpochToGoal === other.currentEpochToGoal
+            this.goalEpochs === other.goalEpochs
         );
     }
 }

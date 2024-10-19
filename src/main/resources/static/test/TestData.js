@@ -69,11 +69,23 @@ export class TestData {
 
     async createTestData() {
 
-        await apiClient.networkAPI.createNetwork(new AlgorithmBoard(3, 1, 0.001, 1.5,
+        await apiClient.dataSetAPI.includeDataSet(this.createDataset(), () => {});
+
+        await apiClient.networkAPI.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
             true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
             this.networksUUID.push(uuid.uuid)
-            apiClient.dataSetAPI.includeDataSet(this.createDataset(), () => {});
         });
+
+        await apiClient.networkAPI.createNetwork(new AlgorithmBoard(3, 1, 0.0001, 1.5,
+            true, "LEAKY_RELU", "PERCEPTRON", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+        });
+
+        await apiClient.networkAPI.createNetwork(new AlgorithmBoard(3, 1, 0.0001, 1.5,
+            true, "LEAKY_RELU", "TRIANGLE", null), uuid => {
+            this.networksUUID.push(uuid.uuid)
+        });
+
         /*
         await apiClient.createNetwork(new AlgorithmBoard(3, 1, 0.01, 1.5,
             true, "LEAKY_RELU", "COMPRESSOR", null), uuid => {

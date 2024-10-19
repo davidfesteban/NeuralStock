@@ -2,6 +2,7 @@ package dev.misei.einfachml.neuralservice.domain.shape;
 
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import dev.misei.einfachml.neuralservice.serial.ShapeDeserializer;
 
 import java.util.List;
 

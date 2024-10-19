@@ -16,7 +16,6 @@ public class Status {
 
     private UUID trainingId;
     private int goalEpochs;
-    private int currentEpochToGoal;
 
     public void incrementAccEpoch() {
         ++accumulatedEpochs;

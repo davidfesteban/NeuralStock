@@ -2,7 +2,11 @@ package dev.misei.einfachml.neuralservice.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
+import dev.misei.einfachml.neuralservice.serial.NetworkDeserializer;
+import dev.misei.einfachml.neuralservice.serial.NetworkSerializer;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +18,11 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 
 @Slf4j
-@AllArgsConstructor
-@RequiredArgsConstructor
+@NoArgsConstructor
 @Setter
 @Getter
+@JsonSerialize(using = NetworkSerializer.class)
+@JsonDeserialize(using = NetworkDeserializer.class)
 public class Network extends ArrayList<Layer> {
 
     private Algorithm algorithm;
@@ -29,7 +34,7 @@ public class Network extends ArrayList<Layer> {
         this.algorithm = algorithm;
         this.inboundFeeder = new ArrayList<>();
         this.outboundFeeder = new ArrayList<>();
-        this.status = new Status(networkId, false, 0, UUID.randomUUID(), 0, 0);
+        this.status = new Status(networkId, false, 0, UUID.randomUUID(), 0);
     }
 
     public static Network create(UUID networkId, Algorithm algorithm) {

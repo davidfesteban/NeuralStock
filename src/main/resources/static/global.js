@@ -90,7 +90,7 @@ function extractCardsDOM(networkBoard) {
         }, {
             title: "Training Metrics",
             summary: [["Status", networkBoard.status.running], ["Epoch Goal", networkBoard.status.goalEpochs],
-                ["Current Epoch", networkBoard.status.currentEpochToGoal], ["Training Id", networkBoard.status.trainingId]]
+                ["Last MSE", 0], ["Training Id", networkBoard.status.trainingId]]
         }, {
             title: "Algorithm Board",
             summary: [["Learning Ratio", networkBoard.algorithmBoard.learningRatio], ["Complexity", networkBoard.algorithmBoard.complexity],

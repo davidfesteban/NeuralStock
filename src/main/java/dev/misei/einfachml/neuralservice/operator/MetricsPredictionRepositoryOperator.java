@@ -55,15 +55,19 @@ public class MetricsPredictionRepositoryOperator {
 
     }
 
+    //TODO: Mostrar el error maximo y average de todas las predicciones.
+    // Mostrar un valor como el error average de la ultima epoca y maximo
 
     private Mono<Void> saveGroupedMSEData(Flux<List<PredictedData>> predictedDataFlux) {
         return predictedDataFlux.concatMap(batch -> {
-            double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).sum();
+            //double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).sum();
+            double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).max().getAsDouble();
+
             int count = batch.size();
-            double mseErrorAverage = mseErrorSum / count;
+            //double mseErrorAverage = mseErrorSum / count;
             UUID networkId = batch.get(0).getNetworkId();
 
-            MSEData mseData = new MSEData(networkId, batch.get(0).getEpochHappened(), mseErrorAverage);
+            MSEData mseData = new MSEData(networkId, batch.get(0).getEpochHappened(), mseErrorSum);
             return Mono.just(mseData);
         }).as(mseDataFlux -> {
             return metricsRepository.saveAll(mseDataFlux);

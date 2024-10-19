@@ -5,6 +5,7 @@ import dev.misei.einfachml.neuralservice.operator.NetworkBackupRepositoryOperato
 import dev.misei.einfachml.neuralservice.operator.NetworkSummaryOperator;
 import dev.misei.einfachml.repository.model.NetworkBoard;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @Component
+@Slf4j
 public class NetworkLoadService {
     private final Map<UUID, Network> networkList = new HashMap<>();
 
@@ -82,7 +84,11 @@ public class NetworkLoadService {
                 });
 
         if (throwable != null) {
-            return restore.then(Mono.error(throwable));
+            return restore
+                    .doOnError(error -> {
+                        log.error("Error occurred while restoring network {}: {}", networkId, error.getMessage());
+                    })
+                    .then(Mono.empty());
         }
 
         return restore.then();
