@@ -6,6 +6,7 @@ import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.repository.NetworkBackupRepository;
 import dev.misei.einfachml.repository.model.NetworkBackup;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @Component
+@Slf4j
 public class NetworkBackupRepositoryOperator {
 
     private NetworkBackupRepository networkBackupRepository;
@@ -22,16 +24,22 @@ public class NetworkBackupRepositoryOperator {
 
         UUID networkId = network.getStatus().getNetworkId();
 
+        //TODO: There is no need of delete. ID is always the same. It will override it!
         return networkBackupRepository.deleteById(networkId)
                 .then(Mono.defer(() -> {
                     NetworkBackup newBackup = new NetworkBackup(networkId, null);
                     try {
+                        log.info("Start Serialising Backup");
                         newBackup.setNetwork(objectMapper.writeValueAsString(network));
+                        log.info("Finished Serialising Backup");
                     } catch (JsonProcessingException e) {
                         return Mono.error(new RuntimeException("Failed to serialize network", e));
                     }
 
-                    return networkBackupRepository.save(newBackup).then();
+                    return networkBackupRepository.save(newBackup)
+                            .doOnNext(a -> log.info("Saved Backup Repository"))
+                            .doOnTerminate(() -> log.info("Terminated Backup"))
+                            .then();
                 }));
     }
 
@@ -48,7 +56,7 @@ public class NetworkBackupRepositoryOperator {
     }
 
     public Mono<Void> deleteByNetwork(Network network) {
-        if(network.getStatus().isRunning()) {
+        if (network.getStatus().isRunning()) {
             return Mono.error(new IllegalStateException("Network still running"));
         }
 

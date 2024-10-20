@@ -15,11 +15,15 @@ public class Connection {
     //
     Double manualOutputFeed;
 
+    //
+    Double adjustedLearningRate;
+
     public Connection(Algorithm algorithm) {
         this.parentActivation = 0d;
         this.weight = algorithm.weightInitialiser();
         this.gradientNeuron = 0d;
         this.manualOutputFeed = null;
+        this.adjustedLearningRate = null;
     }
 
     public Double getOutboundGradientNeuronWeighted() {

@@ -27,13 +27,16 @@ public class ComputeService {
         return networkLoadService.get(networkId)
                 .flatMap(network -> {
                     return networkFluxOperator.compute(network, dataset, epochs, networkBackup -> {
+                                log.info("Saving Backup and Summary");
                                 networkLoadService.saveNetworkBackup(networkBackup).subscribe();
                             })
                             .publish(flux -> {
                                 return metricsPredictionRepositoryOperator.processOrderedEpochPredictions(flux);
                             })
                             .then(networkLoadService.get(networkId).flatMap(networkLoad -> {
-                                return networkLoadService.saveNetworkBackup(networkLoad);
+                                log.info("Saving Final Backups and Summary");
+                                return networkLoadService.saveNetworkBackup(networkLoad)
+                                        .doOnTerminate(() -> log.info("Saved Network Backup"));
                             }))
                             .onErrorResume(error -> {
                                 log.error("Error occurred during execution: " + error.getMessage());

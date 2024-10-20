@@ -6,10 +6,18 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
 
 @Data
 @AllArgsConstructor
 public class Neuron {
+    private static final double GRADIENT_CLIP_THRESHOLD = 7.0;
+    private static final double MIN_LEARNING_RATE = 1e-9;
+    private static final double MAX_LEARNING_RATE = 1e-2;
+    private static final double SMALL_GRADIENT_THRESHOLD = 1e-5; // Below this, increase learning rate
+    private static final double LARGE_GRADIENT_THRESHOLD = 1.0;  // Above this, decrease learning rate
+
 
     final List<Connection> inboundConnections;
     final List<Connection> outboundConnections;
@@ -42,8 +50,20 @@ public class Neuron {
         var derivativeSigmoid = algorithm.getAlgorithmType().derivative(this.activation);
         var gradientLossAndSigmoidToNeuron = gradientExpectedToError * derivativeSigmoid;
 
-        //GradientNeuronToWeight
-        inboundConnections.forEach(inboundConnection -> inboundConnection.gradientNeuron = gradientLossAndSigmoidToNeuron);
+        inboundConnections.forEach(inboundConnection -> {
+            double rawGradient = gradientLossAndSigmoidToNeuron;
+
+            //TODO: Add into algorithm as optional. Add learning Ratio standards. 1e-3 1e-2 1e-5 1e-9 1e-12
+            // Apply gradient clipping if necessary
+            if (Math.abs(rawGradient) > GRADIENT_CLIP_THRESHOLD) {
+                rawGradient = Math.signum(rawGradient) * GRADIENT_CLIP_THRESHOLD;
+            }
+
+            inboundConnection.gradientNeuron = rawGradient;
+        });
+
+        //GradientNeuronToWeight V1
+        //inboundConnections.forEach(inboundConnection -> inboundConnection.gradientNeuron = gradientLossAndSigmoidToNeuron);
     }
 
     public void updateWeights() {
@@ -58,5 +78,22 @@ public class Neuron {
         return this.outboundConnections.stream()
                 .map(Connection::getOutboundGradientNeuronWeighted)
                 .reduce(Double::sum).orElseThrow(() -> new RuntimeException("Cannot calculate total gradient of children loss"));
+    }
+
+    // Function to adjust the learning rate dynamically based on the gradient's magnitude
+    private double adjustLearningRate(Connection inbound, double gradient) {
+        double baseLearningRate = algorithm.getLearningRatio();
+        double currentLearningRate = Optional.ofNullable(inbound.getAdjustedLearningRate()).orElse(baseLearningRate);
+
+        if (Math.abs(gradient) < SMALL_GRADIENT_THRESHOLD) {
+            currentLearningRate = Math.min(MAX_LEARNING_RATE, currentLearningRate * 1.1);  // Increase by 10%
+        } else if (Math.abs(gradient) > LARGE_GRADIENT_THRESHOLD) {
+            // If the gradient is large, decrease the learning rate
+            currentLearningRate = Math.max(MIN_LEARNING_RATE, currentLearningRate * 0.9);  // Decrease by 10%
+        }
+
+        inbound.setAdjustedLearningRate(currentLearningRate);
+
+        return currentLearningRate;
     }
 }

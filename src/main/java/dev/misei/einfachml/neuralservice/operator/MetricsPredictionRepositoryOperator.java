@@ -9,8 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
+import reactor.core.scheduler.Schedulers;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BinaryOperator;
@@ -22,9 +26,9 @@ import java.util.function.Function;
 @Slf4j
 public class MetricsPredictionRepositoryOperator {
 
+    private final Map<UUID, Boolean> cleanUpRunning = new ConcurrentHashMap<>();
     private PredictedDataRepositoryPerformance predictedDataRepositoryPerformance;
     private MetricsRepository metricsRepository;
-    private final Map<UUID, Boolean> cleanUpRunning = new ConcurrentHashMap<>();
 
     public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount, Boolean downsample) {
         //TODO
@@ -62,6 +66,7 @@ public class MetricsPredictionRepositoryOperator {
             }
             return isNewEpoch;
         }, true).doOnNext(predictedList -> {
+            log.info("Processing Compute Batch: " + predictedList.getFirst().getEpochHappened());
             if (predictedList.stream().anyMatch(predictedData -> predictedData.getEpochHappened() != predictedList.getFirst().getEpochHappened())) {
                 log.error("Epochs are in different groups while processing!");
             }
@@ -76,18 +81,32 @@ public class MetricsPredictionRepositoryOperator {
 
     private Mono<Void> saveGroupedMSEData(Flux<List<PredictedData>> predictedDataFlux) {
         return predictedDataFlux.concatMap(batch -> {
-            //double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).sum();
-            double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).max().getAsDouble();
+                    //double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).sum();
+                    double mseErrorSum = batch.stream().mapToDouble(PredictedData::getMseError).max().getAsDouble();
 
-            int count = batch.size();
-            //double mseErrorAverage = mseErrorSum / count;
-            UUID networkId = batch.get(0).getNetworkId();
+                    int count = batch.size();
+                    //double mseErrorAverage = mseErrorSum / count;
+                    UUID networkId = batch.get(0).getNetworkId();
+                    MSEData mseData = new MSEData(networkId, batch.get(0).getEpochHappened(), mseErrorSum);
+                    log.info("Processed MSE Batch " +  batch.get(0).getEpochHappened());
+                    return Mono.just(mseData);
+                }).as(mseDataFlux -> {
+                    metricsRepository.saveAll(mseDataFlux)
+                            .subscribeOn(Schedulers.parallel())  // Run asynchronously in parallel
+                            .doOnNext(a -> log.info("Start Saving MSE Grouped Next"))
+                            .doOnTerminate(() -> log.info("Finish Saving MSE Grouped"))
+                            .subscribe();  // Fire and forget
 
-            MSEData mseData = new MSEData(networkId, batch.get(0).getEpochHappened(), mseErrorSum);
-            return Mono.just(mseData);
-        }).as(mseDataFlux -> {
-            return metricsRepository.saveAll(mseDataFlux);
-        }).then();
+                    return Mono.empty();
+                    //return metricsRepository.saveAll(mseDataFlux)
+                    //        .doOnNext(a ->  log.info("Saved MSE Grouped Next"))
+                    //        .doOnTerminate(() -> log.info("Terminated Saved MSE Grouped"));
+                })
+                //.doOnNext(mseData -> log.info("Saved MSE Grouped " + mseData.getEpochHappened()))
+                .doOnTerminate(() -> {
+                    log.info("Finished All Flux MSE");
+                })
+                .then();
     }
 
     private Mono<Void> saveBatchByNetworkId(Flux<List<PredictedData>> predictedDataFlux) {
