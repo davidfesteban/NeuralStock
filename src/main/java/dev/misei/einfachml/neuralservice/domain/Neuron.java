@@ -69,9 +69,18 @@ public class Neuron {
     public void updateWeights() {
         inboundConnections.forEach(inbound ->
                 inbound.weight = inbound.weight -
-                        (algorithm.getLearningRatio() * inbound.gradientNeuron * inbound.parentActivation));
+                        (adjustLearningRate(inbound) * inbound.gradientNeuron * inbound.parentActivation));
 
-        bias = bias - (algorithm.getLearningRatio() * (inboundConnections.getFirst().gradientNeuron));
+        double totalGradient = inboundConnections.stream()
+                .mapToDouble(inbound -> inbound.gradientNeuron)
+                .average().orElse(0d);
+
+        double averageLearningRate = inboundConnections.stream()
+                .mapToDouble(inbound -> inbound.adjustedLearningRate)  // Get the learning rate for each connection
+                .average()
+                .orElse(algorithm.getLearningRatio());
+
+        bias = bias - (averageLearningRate * totalGradient);
     }
 
     private Double computeErrorLoss() {
@@ -81,13 +90,13 @@ public class Neuron {
     }
 
     // Function to adjust the learning rate dynamically based on the gradient's magnitude
-    private double adjustLearningRate(Connection inbound, double gradient) {
+    private double adjustLearningRate(Connection inbound) {
         double baseLearningRate = algorithm.getLearningRatio();
         double currentLearningRate = Optional.ofNullable(inbound.getAdjustedLearningRate()).orElse(baseLearningRate);
 
-        if (Math.abs(gradient) < SMALL_GRADIENT_THRESHOLD) {
+        if (Math.abs(inbound.gradientNeuron) < SMALL_GRADIENT_THRESHOLD) {
             currentLearningRate = Math.min(MAX_LEARNING_RATE, currentLearningRate * 1.1);  // Increase by 10%
-        } else if (Math.abs(gradient) > LARGE_GRADIENT_THRESHOLD) {
+        } else if (Math.abs(inbound.gradientNeuron) > LARGE_GRADIENT_THRESHOLD) {
             // If the gradient is large, decrease the learning rate
             currentLearningRate = Math.max(MIN_LEARNING_RATE, currentLearningRate * 0.9);  // Decrease by 10%
         }
