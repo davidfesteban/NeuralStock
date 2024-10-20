@@ -3,6 +3,7 @@ package dev.misei.einfachml.neuralservice.operator;
 import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,6 +13,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 @Component
+@Slf4j
 public class ComputeFluxOperator {
 
     public Flux<PredictedData> compute(Network network, Flux<DataPair> dataset, int epochs, Consumer<Network> callbackBackup) {
@@ -29,7 +31,7 @@ public class ComputeFluxOperator {
 
                     var flux = dataset.concatMap(dataPair -> {
                         var predictedData = network.compute(dataPair.getInputs(), dataPair.getExpected());
-
+                        //log.info(dataPair.toString());
                         Mono<PredictedData> error = checkForInfiniteAndNaN(predictedData);
 
                         return error == null ? Mono.just(predictedData) : error;
@@ -71,6 +73,7 @@ public class ComputeFluxOperator {
     private Mono<PredictedData> checkForInfiniteAndNaN(PredictedData predictedData) {
         if (predictedData.getMseError().isNaN() || predictedData.getMseError().isInfinite() ||
                 predictedData.getPredicted().stream().anyMatch(aDouble -> aDouble.isNaN() || aDouble.isInfinite())) {
+            log.error(predictedData.getEpochHappened() + " Epoch NaN");
             return Mono.error(new StreamCorruptedException("NaN | Inf detected in prediction results. Stopping execution."));
         }
         return null;

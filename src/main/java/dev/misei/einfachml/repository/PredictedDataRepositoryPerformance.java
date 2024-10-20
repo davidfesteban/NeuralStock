@@ -10,6 +10,9 @@ import java.util.UUID;
 public interface PredictedDataRepositoryPerformance {
     Mono<Void> saveBatchByNetworkId(UUID networkId, List<PredictedData> batch);
 
+    Mono<Long> countDistinctEpochHappened(UUID networkId);
+
+
     Flux<PredictedData> findByNetworkIdAndEpochHappenedBetween(UUID networkId, int epochHappenedStart, int epochHappenedEnd);
 
     Flux<PredictedData> findAllByNetworkId(UUID networkId);
@@ -17,4 +20,6 @@ public interface PredictedDataRepositoryPerformance {
     Mono<Long> countByNetworkId(UUID networkId);
 
     Mono<Void> deleteByNetworkId(UUID networkId);
+
+    Mono<Void> deleteOlderEpochsKeep2ByNetworkId(UUID networkId);
 }

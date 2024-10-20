@@ -6,9 +6,13 @@ import dev.misei.einfachml.neuralservice.domain.Network;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.neuralservice.domain.algorithm.AlgorithmType;
 import dev.misei.einfachml.neuralservice.domain.shape.StandardShape;
+import dev.misei.einfachml.repository.DataPairRepository;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
+import lombok.AllArgsConstructor;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -20,18 +24,24 @@ import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.IntStream;
 
+@SpringBootTest
 public class NetworkTest {
+
+    @Autowired
+    public DataPairRepository dataPairRepository;
 
     @Test
     void letsgo() {
         UUID networkId = UUID.randomUUID();
-        Network networkA = Network.create(networkId, new Algorithm(3, 1, 0.0001, 1.5, true,
+        Network networkA = Network.create(networkId, new Algorithm(7, 1, 1e-10, 1, false,
                 AlgorithmType.LEAKY_RELU, StandardShape.PERCEPTRON));
-        List<DataPair> dataSet = createDataset(networkId);
+
+        List<DataPair> dataSet = dataPairRepository.findByTopicIgnoreCaseOrderByCreatedAtAsc("StocksV1").collectList().block();
         List<PredictedData> predictedDataList = new ArrayList<>();
-        IntStream.range(0, 200000).forEach(new IntConsumer() {
+        IntStream.range(0, 5000).forEach(new IntConsumer() {
             @Override
             public void accept(int value) {
+                System.out.println(value);
                 dataSet.forEach(new Consumer<DataPair>() {
                     @Override
                     public void accept(DataPair dataPair) {
@@ -47,13 +57,23 @@ public class NetworkTest {
             public void accept(DataPair dataPair) {
                 networkA.computeForward(dataPair.getInputs());
                 PredictedData predictedData = new PredictedData(
-                        UUID.randomUUID(), Instant.now().toEpochMilli(), dataPair.getNetworkId(),
+                        UUID.randomUUID(), Instant.now().toEpochMilli(), networkId,
                         200000, networkA.getOutboundFeeder().stream().map(Connection::getParentActivation).toList(),
                         dataPair.getInputs(), dataPair.getExpected());
                 predictedDataList.add(predictedData);
                 networkA.computeBackward(dataPair.getExpected());
             }
         });
+
+        var map = predictedDataList.stream().mapToDouble(new ToDoubleFunction<PredictedData>() {
+            @Override
+            public double applyAsDouble(PredictedData value) {
+                return value.calculateMseForPredictedData();
+            }
+        });
+
+        System.out.println(map.max());
+
 
         var he = predictedDataList.reversed();
         var ha = he.stream().filter(new Predicate<PredictedData>() {
@@ -77,7 +97,6 @@ public class NetworkTest {
         System.out.println("Hola");
     }
 
-    @Test
     //void letsgo3d() {
     //    var datasetA = createDatasetSum(true);
     //    Network network = Network.create(new Algorithm(2, 1, 0.01,
@@ -119,46 +138,6 @@ public class NetworkTest {
     //    exportToCsv(networkE, "networkE");
     //}
 
-
-    private List<DataPair> createDataset(UUID networkId) {
-        List<DataPair> datapairs = new ArrayList<>();
-
-        IntStream.range(0, 10).forEach(new IntConsumer() {
-            @Override
-            public void accept(int x) {
-                IntStream.range(0, 10).forEach(new IntConsumer() {
-                    @Override
-                    public void accept(int y) {
-                        datapairs.add(new DataPair(
-                                networkId,
-                                UUID.randomUUID(),
-                                Instant.now().toEpochMilli(),
-                                List.of((double) x, (double) y, 0d),
-                                List.of((double) (x + y))
-                        ));
-
-                        datapairs.add(new DataPair(
-                                networkId,
-                                UUID.randomUUID(),
-                                Instant.now().toEpochMilli(),
-                                List.of((double) x, (double) y, 1d),
-                                List.of((double) (x - y))
-                        ));
-
-                        datapairs.add(new DataPair(
-                                networkId,
-                                UUID.randomUUID(),
-                                Instant.now().toEpochMilli(),
-                                List.of((double) x, (double) y, 2d),
-                                List.of((double) (x * y))
-                        ));
-                    }
-                });
-            }
-        });
-
-        return datapairs;
-    }
 
     //private void exportToCsv(Network network, String name) {
     //    try (FileWriter csvWriter = new FileWriter(name + ".csv")) {

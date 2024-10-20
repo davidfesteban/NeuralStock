@@ -45,6 +45,11 @@ public class NetworkLoadService {
         });
     }
 
+    public Mono<Void> updateLearningRatio(UUID uuid, double learningRatio) {
+        networkList.get(uuid).updateLearningRatio(learningRatio);
+        return Mono.empty();
+    }
+
     public Mono<Network> delete(UUID networkId) {
         Network network = networkList.get(networkId);
 

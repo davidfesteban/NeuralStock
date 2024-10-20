@@ -1,14 +1,14 @@
 package dev.misei.einfachml.neuralservice.domain;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dev.misei.einfachml.neuralservice.domain.algorithm.Algorithm;
 import dev.misei.einfachml.neuralservice.serial.NetworkDeserializer;
 import dev.misei.einfachml.neuralservice.serial.NetworkSerializer;
 import dev.misei.einfachml.repository.model.PredictedData;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -53,6 +53,14 @@ public class Network extends ArrayList<Layer> {
         return result;
     }
 
+    public void updateLearningRatio(double learningRatio) {
+        algorithm.setLearningRatio(learningRatio);
+        this.forEach(subLayers ->
+                subLayers.forEach(neurons -> neurons.forEach(neuron ->
+                        neuron.getAlgorithm().setLearningRatio(learningRatio))));
+
+    }
+
 
     public PredictedData compute(List<Double> input, List<Double> expect) {
         computeForward(input);
@@ -73,12 +81,12 @@ public class Network extends ArrayList<Layer> {
                 input, expect);
     }
 
-    private void computeForward(List<Double> inputs) {
+    public void computeForward(List<Double> inputs) {
         IntStream.range(0, inboundFeeder.size()).forEach(i -> inboundFeeder.get(i).parentActivation = inputs.get(i));
         this.forEach(Layer::computeForward);
     }
 
-    private void computeBackward(List<Double> outputs) {
+    public void computeBackward(List<Double> outputs) {
         IntStream.range(0, outboundFeeder.size()).forEach(i -> outboundFeeder.get(i).manualOutputFeed = outputs.get(i));
 
         this.reversed().forEach(Layer::prepareGradient);

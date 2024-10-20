@@ -35,6 +35,11 @@ public class NetworkAPI {
         return networkLoadService.load(networkId, network, false).map(UUIDResponse::new);
     }
 
+    @GetMapping("/updateLearningRatio")
+    public Mono<Void> createNetwork(@RequestParam UUID networkId, @RequestParam Double learningRatio) {
+        return networkLoadService.updateLearningRatio(networkId, learningRatio);
+    }
+
     @GetMapping("/getAllSummary")
     public Flux<NetworkBoard> getAllNetworkBoards() {
         return networkLoadService.getAllSummariesEnriched();

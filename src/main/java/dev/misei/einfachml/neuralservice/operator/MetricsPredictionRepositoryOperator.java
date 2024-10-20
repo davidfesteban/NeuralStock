@@ -10,9 +10,12 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @AllArgsConstructor
 @Component
@@ -21,6 +24,7 @@ public class MetricsPredictionRepositoryOperator {
 
     private PredictedDataRepositoryPerformance predictedDataRepositoryPerformance;
     private MetricsRepository metricsRepository;
+    private final Map<UUID, Boolean> cleanUpRunning = new ConcurrentHashMap<>();
 
     public Flux<PredictedData> getAllPredictionsByNetwork(UUID networkId, Integer lastEpochAmount, Boolean downsample) {
         //TODO
@@ -28,7 +32,19 @@ public class MetricsPredictionRepositoryOperator {
     }
 
     public Flux<MSEData> getMSEData(UUID networkId) {
-        return metricsRepository.findByNetworkIdOrderByEpochHappenedAsc(networkId);
+        return metricsRepository.countByNetworkId(networkId)
+                .flux().concatMap(
+                        (Function<Long, Flux<MSEData>>) aLong -> metricsRepository.findByNetworkIdOrderByEpochHappenedAsc(networkId)
+                                .buffer(aLong.intValue() / 100)
+                                .concatMap(mseData -> {
+                                    var mseDataAcc = mseData.stream().reduce((BinaryOperator<MSEData>) (mseData1, mseData2) -> {
+                                        mseData1.setError(mseData1.getError() + mseData2.getError());
+                                        return mseData1;
+                                    }).orElse(new MSEData(networkId, 0, 0d));
+
+                                    mseDataAcc.setError(mseDataAcc.getError() / mseData.size());
+                                    return Mono.just(mseDataAcc);
+                                }));
     }
 
     public Mono<Void> processOrderedEpochPredictions(Flux<PredictedData> predictedDataFlux) {
@@ -75,8 +91,25 @@ public class MetricsPredictionRepositoryOperator {
     }
 
     private Mono<Void> saveBatchByNetworkId(Flux<List<PredictedData>> predictedDataFlux) {
-        return predictedDataFlux.concatMap(batch -> {
-            return predictedDataRepositoryPerformance.saveBatchByNetworkId(batch.getFirst().getNetworkId(), batch);
-        }).then();
+        return predictedDataFlux.then();
+        /*
+        return predictedDataFlux
+                .collect(() -> new ArrayDeque<List<PredictedData>>(2), (deque, batch) -> {
+                    if (deque.size() == 2) {
+                        deque.poll();
+                    }
+                    deque.offer(batch);
+                })
+                .flatMap(deque -> {
+                    if(deque.isEmpty()) return Mono.empty();
+
+                    UUID networkId = deque.peekFirst().get(0).getNetworkId();
+                    return predictedDataRepositoryPerformance.deleteByNetworkId(networkId)
+                            .then(
+                                    Flux.fromIterable(deque)
+                                            .concatMap(batch -> predictedDataRepositoryPerformance.saveBatchByNetworkId(batch.get(0).getNetworkId(), batch))
+                                            .then()
+                            );
+                }); */
     }
 }

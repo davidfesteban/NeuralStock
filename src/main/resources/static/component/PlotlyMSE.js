@@ -57,7 +57,7 @@ export class PlotlyMSE extends HTMLElement {
             };
 
             // Create the initial plot
-            Plotly.react(this.mseErrorElement, mseData, mseLayout);
+            Plotly.newPlot(this.mseErrorElement, mseData, mseLayout);
         } else {
             // Prepare new data to be added
             const update = {

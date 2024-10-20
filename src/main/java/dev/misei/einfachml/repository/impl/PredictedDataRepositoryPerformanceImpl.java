@@ -4,9 +4,9 @@ import dev.misei.einfachml.repository.PredictedDataRepositoryPerformance;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -15,7 +15,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
 
 @Repository
 @AllArgsConstructor
@@ -27,6 +26,15 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
     @Override
     public Mono<Void> saveBatchByNetworkId(UUID networkId, List<PredictedData> batch) {
         return mongoTemplate.insert(batch, networkId.toString()).then();
+    }
+
+    @Override
+    public Mono<Long> countDistinctEpochHappened(UUID networkId) {
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.group("epochHappened")
+        );
+
+        return mongoTemplate.aggregate(aggregation, networkId.toString(), Object.class).count();
     }
 
     @Override
@@ -51,5 +59,14 @@ public class PredictedDataRepositoryPerformanceImpl implements PredictedDataRepo
     @Override
     public Mono<Void> deleteByNetworkId(UUID networkId) {
         return mongoTemplate.dropCollection(networkId.toString());
+    }
+
+    @Override
+    public Mono<Void> deleteOlderEpochsKeep2ByNetworkId(UUID networkId) {
+        Query query = new Query()
+                .with(Sort.by(Sort.Direction.DESC, "epochHappened"))
+                .skip(2);
+
+        return mongoTemplate.remove(query, networkId.toString()).then();
     }
 }
