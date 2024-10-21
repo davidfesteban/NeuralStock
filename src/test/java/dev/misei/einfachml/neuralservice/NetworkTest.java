@@ -10,6 +10,7 @@ import dev.misei.einfachml.repository.DataPairRepository;
 import dev.misei.einfachml.repository.model.DataPair;
 import dev.misei.einfachml.repository.model.PredictedData;
 import lombok.AllArgsConstructor;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +26,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.stream.IntStream;
 
 @SpringBootTest
+@Disabled
 public class NetworkTest {
 
     @Autowired

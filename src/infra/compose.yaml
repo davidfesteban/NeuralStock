@@ -11,6 +11,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
+      - ./data:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   mongo-express:
@@ -28,3 +29,11 @@ services:
       - mongo
     ports:
       - "8888:8081"
+
+  spring-boot-app:
+    container_name: EinfachML
+    build:
+      context: ../../
+      dockerfile: src/infra/Dockerfile
+    ports:
+      - "8085:8080"

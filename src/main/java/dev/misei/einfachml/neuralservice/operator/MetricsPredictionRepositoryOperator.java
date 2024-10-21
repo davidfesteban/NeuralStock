@@ -66,7 +66,7 @@ public class MetricsPredictionRepositoryOperator {
             }
             return isNewEpoch;
         }, true).doOnNext(predictedList -> {
-            log.info("Processing Compute Batch: " + predictedList.getFirst().getEpochHappened());
+            //log.info("Processing Compute Batch: " + predictedList.getFirst().getEpochHappened());
             if (predictedList.stream().anyMatch(predictedData -> predictedData.getEpochHappened() != predictedList.getFirst().getEpochHappened())) {
                 log.error("Epochs are in different groups while processing!");
             }
@@ -88,13 +88,11 @@ public class MetricsPredictionRepositoryOperator {
                     //double mseErrorAverage = mseErrorSum / count;
                     UUID networkId = batch.get(0).getNetworkId();
                     MSEData mseData = new MSEData(networkId, batch.get(0).getEpochHappened(), mseErrorSum);
-                    log.info("Processed MSE Batch " +  batch.get(0).getEpochHappened());
+                    //log.info("Processed MSE Batch " +  batch.get(0).getEpochHappened());
                     return Mono.just(mseData);
                 }).as(mseDataFlux -> {
                     metricsRepository.saveAll(mseDataFlux)
-                            .subscribeOn(Schedulers.parallel())  // Run asynchronously in parallel
-                            .doOnNext(a -> log.info("Start Saving MSE Grouped Next"))
-                            .doOnTerminate(() -> log.info("Finish Saving MSE Grouped"))
+                            .subscribeOn(Schedulers.parallel())
                             .subscribe();  // Fire and forget
 
                     return Mono.empty();

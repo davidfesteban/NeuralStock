@@ -34,8 +34,7 @@ public class ComputeFluxOperator {
                         //log.info(dataPair.toString());
                         Mono<PredictedData> error = checkForInfiniteAndNaN(predictedData);
                         return error == null ? Mono.just(predictedData) : error;
-                    }).doOnSubscribe(a -> log.info("Computing DataSet"))
-                            .doOnTerminate(() -> log.info("Terminated DataSet"));
+                    });
 
                     network.getStatus().incrementAccEpoch();
 
