@@ -6,7 +6,7 @@
 
 # Backpropagation Example
 
-This document walks through the process of forward propagation, calculating the gradients of the loss function with respect to weights and biases, and updating them during backpropagation. The example includes a neural network with two hidden layers and two output neurons.
+ This document walks through the process of forward propagation, calculating the gradients of the loss function with respect to weights and biases, and updating them during backpropagation. The example includes a neural network with two hidden layers and two output neurons.
 
 ## Step 1: Recap of the Forward Pass
 
